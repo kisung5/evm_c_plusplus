@@ -31,6 +31,9 @@
 *.out
 *.app
 
-
-# Visual studio files
-Visual Studio Community 2019/VideoMagnification/.vs
+# Visual Studio Files
+.vs/
+*.exe.recipe
+*.log
+*.ilk
+*.pdb
