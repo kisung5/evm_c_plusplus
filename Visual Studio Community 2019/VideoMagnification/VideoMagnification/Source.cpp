@@ -10,10 +10,17 @@ int main() {
 
     // Create a VideoCapture object and open the input file
     // If the input is the web camera, pass 0 instead of the video file name
-    VideoCapture cap("vid/baby.mp4");
+    VideoCapture video("vid/guitar.mp4");
+
+    // Extract video info
+    int vidHeight = video.get(CAP_PROP_FRAME_HEIGHT);
+    int vidWidth = video.get(CAP_PROP_FRAME_WIDTH);
+    int nChannels = 3;
+    int fr = video.get(CAP_PROP_FPS);
+    int len = video.get(CAP_PROP_FRAME_COUNT);
 
     // Check if camera opened successfully
-    if (!cap.isOpened()) {
+    if (!video.isOpened()) {
         cout << "Error opening video stream or file" << endl;
         return -1;
     }
@@ -22,7 +29,7 @@ int main() {
 
         Mat frame;
         // Capture frame-by-frame
-        cap >> frame;
+        video >> frame;
 
         // If the frame is empty, break immediately
         if (frame.empty())
@@ -38,7 +45,7 @@ int main() {
     }
 
     // When everything done, release the video capture object
-    cap.release();
+    video.release();
 
     // Closes all the frames
     destroyAllWindows();
