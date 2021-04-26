@@ -19,15 +19,16 @@ int main() {
     int fr = video.get(CAP_PROP_FPS);
     int len = video.get(CAP_PROP_FRAME_COUNT);
 
-    // Check if camera opened successfully
+    // Check if video opened successfully
     if (!video.isOpened()) {
         cout << "Error opening video stream or file" << endl;
         return -1;
     }
 
     while (1) {
+        // Define variables
+        Mat frame, dst, dstL2, dstU1, laplacian;
 
-        Mat frame;
         // Capture frame-by-frame
         video >> frame;
 
@@ -35,8 +36,18 @@ int main() {
         if (frame.empty())
             break;
 
+        // Gaussian Pyramid downsampling
+        pyrDown(frame, dst);
+        pyrDown(dst, dstL2);
+
+        // Gaussian Pyramid downsampling
+        pyrUp(dstL2, dstU1);
+
+        // Build Laplacian Pyramid
+        subtract(dstU1, dst, laplacian);
+
         // Display the resulting frame
-        imshow("Frame", frame);
+        imshow("Frame", laplacian);
 
         // Press  ESC on keyboard to exit
         char c = (char)waitKey(25);
@@ -52,3 +63,4 @@ int main() {
 
     return 0;
 }
+
