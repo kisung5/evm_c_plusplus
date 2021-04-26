@@ -19,7 +19,23 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="Source.cpp" />
+    <ClCompile Include="amplify_spatial_Gdown_temporal_ideal.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Media Include="vid\baby.mp4" />
+    <Media Include="vid\baby2.mp4" />
+    <Media Include="vid\camera.mp4" />
+    <Media Include="vid\face.mp4" />
+    <Media Include="vid\face2.mp4" />
+    <Media Include="vid\guitar.mp4" />
+    <Media Include="vid\shadow.mp4" />
+    <Media Include="vid\subway.mp4" />
+    <Media Include="vid\wrist.mp4" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="processing_functions.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -81,8 +97,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\opencv\build\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\opencv\build\x64\vc15\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\opencv\build\include;C:\opencv\build\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\opencv\build\x64\vc15\lib;C:\opencv\build\x64\vc15\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
