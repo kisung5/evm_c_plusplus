@@ -21,7 +21,10 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="amplify_spatial_Gdown_temporal_ideal.cpp">
+    <ClCompile Include="processing_functions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="im_conv.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -56,6 +59,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="processing_functions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="im_conv.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

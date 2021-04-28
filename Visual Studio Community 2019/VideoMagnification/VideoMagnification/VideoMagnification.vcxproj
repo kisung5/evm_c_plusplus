@@ -19,9 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="im_conv.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Source.cpp" />
-    <ClCompile Include="amplify_spatial_Gdown_temporal_ideal.cpp" />
+    <ClCompile Include="processing_functions.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Media Include="vid\baby.mp4" />
@@ -35,6 +36,7 @@
     <Media Include="vid\wrist.mp4" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="im_conv.h" />
     <ClInclude Include="processing_functions.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
