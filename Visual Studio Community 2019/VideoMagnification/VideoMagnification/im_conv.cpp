@@ -56,5 +56,12 @@ Mat rgb2ntsc(Mat A) {
 Mat ntsc2rgb(Mat A) {
 	Mat B;
 
+	// let's define the matrix for YIQ -> RGB conversion
+	Matx33d matRGB(1.000f, 0.956f, 0.621f,
+		1.000f, -0.272f, -0.647f,
+		1.000f, -1.106f, 1.703f);
+
+	transform(A, B, matRGB);
+
 	return B;
 }
