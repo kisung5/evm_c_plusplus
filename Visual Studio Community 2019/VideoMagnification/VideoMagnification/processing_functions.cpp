@@ -82,7 +82,7 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, int alpha
     //cout << vidHeight << endl;
     //cout << vidWidth << endl;
     //cout << fr << endl;
-    //cout << len << endl;
+    cout << len << endl;
 
     // Write video
     // Define the codec and create VideoWriter object
@@ -111,9 +111,9 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, int alpha
     cout << "Finished" << endl;
 
     // Testing temporal filtering values
-    cout << filtered_stack[0].at<Vec3d>(0, 0) << endl;
-    cout << filtered_stack[0].at<Vec3d>(0, 1) << endl;
-    cout << filtered_stack[0].at<Vec3d>(0, 2) << endl;
+    //cout << filtered_stack[0].at<Vec3d>(0, 0) << endl;
+    //cout << filtered_stack[0].at<Vec3d>(0, 1) << endl;
+    //cout << filtered_stack[0].at<Vec3d>(0, 2) << endl;
 
     //for (int i = startIndex; i < endIndex; i++) {
 
@@ -302,7 +302,7 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
 
     int total_rows = input[0].rows * input[0].cols * input[0].channels();
 
-    Mat temp_dft(total_rows, n, CV_64F);
+    Mat temp_dft(total_rows, n, CV_64FC1);
 
     int pos_temp = 0;
     for (int x = 0; x < input[0].rows; x++) {
@@ -314,43 +314,38 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
                 temp_dft.at<double>(pos_temp+1, i) = pix_colors[1];
                 temp_dft.at<double>(pos_temp+2, i) = pix_colors[2];
             }
+
+            pos_temp += 3;
             
         }
     }
     
-    // Testing the values in temp_dft [OK]
-    //cout << temp_dft.at<double>(0, 0) << endl;
-    //cout << temp_dft.at<double>(1, 0) << endl;
-    //cout << temp_dft.at<double>(2, 0) << endl;
-    //cout << temp_dft.at<double>(3, 0) << endl;
-    //cout << temp_dft.at<double>(4, 0) << endl;
-    //cout << temp_dft.at<double>(5, 0) << endl;
-    //cout << temp_dft.at<double>(6, 0) << endl;
-    //cout << temp_dft.at<double>(7, 0) << endl;
-    //cout << temp_dft.at<double>(8, 0) << endl;
+    // Testing the values in temp_dft [OK - PASSED]
+    //int test_index = n-1;
+    //cout << "-----Testing vectorizing values in " + to_string(test_index) + "-------" << endl;
+    //for (int i = total_rows-3; i < total_rows; i++) {
+    //    cout << temp_dft.at<double>(i, test_index) << endl;
+    //}
+    //cout << input[test_index].at<Vec3d>(5, 9) << endl;
+    //cout << "----------End of tests----------" << endl;
 
-    //cout << input[0].at<Vec3d>(0, 0) << endl;
-    //cout << input[0].at<Vec3d>(0, 1) << endl;
-    //cout << input[0].at<Vec3d>(0, 2) << endl;
-
-    //cout << temp_dft.at<double>(total_rows-9, n - 1) << endl;
-    //cout << temp_dft.at<double>(total_rows-8, n - 1) << endl;
-    //cout << temp_dft.at<double>(total_rows-7, n - 1) << endl;
-    //cout << temp_dft.at<double>(total_rows-6, n - 1) << endl;
-    //cout << temp_dft.at<double>(total_rows-5, n - 1) << endl;
-    //cout << temp_dft.at<double>(total_rows-4, n - 1) << endl;
-    //cout << temp_dft.at<double>(total_rows-3, n - 1) << endl;
-    //cout << temp_dft.at<double>(total_rows-2, n - 1) << endl;
-    //cout << temp_dft.at<double>(total_rows-1, n - 1) << endl;
-
-    //cout << input[n-1].at<Vec3d>(input[0].rows-1, input[0].cols - 3) << endl;
-    //cout << input[n-1].at<Vec3d>(input[0].rows-1, input[0].cols - 2) << endl;
-    //cout << input[n-1].at<Vec3d>(input[0].rows-1, input[0].cols - 1) << endl;
 
     Mat input_dft, input_idft;
 
     dft(temp_dft, input_dft, DFT_ROWS | DFT_COMPLEX_OUTPUT);
 
+    // Testing the values in the transformation DFT [OK - Passed]
+    //int test_index = total_rows-1;
+    //cout << "-----Testing DFT values in " + to_string(test_index) + "-------" << endl;
+    //for (int i = 0; i < 10; i++) {
+    //    cout << input_dft.at<Vec2d>(test_index, i) << endl;
+    //}
+    //for (int i = 879; i < 890; i++) {
+    //    cout << input_dft.at<Vec2d>(test_index, i) << endl;
+    //}
+    //cout << "----------End of tests----------" << endl;
+
+    // Filtering the video matrix with a mask
     for (int i = 0; i < total_rows; i++) {
         for (int j = 0; j < n; j++) {
             if (!mask.at<bool>(j, 0)) {
@@ -360,35 +355,18 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
         }
     }
 
-    //cout << input_dft.at<Vec2d>(0, 0) << endl;
-    //cout << input_dft.at<Vec2d>(0, 1) << endl;
-    //cout << input_dft.at<Vec2d>(0, 2) << endl;
-    //cout << input_dft.at<Vec2d>(0, 3) << endl;
-    //cout << input_dft.at<Vec2d>(0, 68) << endl;
-    //cout << input_dft.at<Vec2d>(0, 69) << endl;
-    //cout << input_dft.at<Vec2d>(0, 70) << endl;
-    //cout << input_dft.at<Vec2d>(0, 71) << endl;
-    //cout << input_dft.at<Vec2d>(0, 72) << endl;
-    //cout << input_dft.at<Vec2d>(0, 73) << endl;
-    //cout << input_dft.at<Vec2d>(0, 74) << endl;
-    //cout << input_dft.at<Vec2d>(0, 75) << endl;
-    //cout << input_dft.at<Vec2d>(0, 76) << endl;
-    //cout << input_dft.at<Vec2d>(0, 77) << endl;
-    //cout << input_dft.at<Vec2d>(0, 78) << endl;
-    //cout << input_dft.at<Vec2d>(0, 79) << endl;
-    //cout << input_dft.at<Vec2d>(0, 80) << endl;
-    //cout << input_dft.at<Vec2d>(0, 81) << endl;
+    idft(input_dft, input_idft, DFT_ROWS | DFT_COMPLEX_INPUT | DFT_SCALE);
 
-    idft(input_dft, input_idft, DFT_ROWS);
-
-    // Testing the values for the transformation [OK]
-    cout << input_idft.at<Vec2d>(0, 0) << endl;
-    cout << input_idft.at<Vec2d>(1, 0) << endl;
-    cout << input_idft.at<Vec2d>(2, 0) << endl;
-    cout << input_idft.at<Vec2d>(3, 0) << endl;
-    cout << input_idft.at<Vec2d>(4, 0) << endl;
-    cout << input_idft.at<Vec2d>(5, 0) << endl;
-    cout << input_idft.at<Vec2d>(6, 0) << endl;
+    // Testing the values for the transformation IDFT [OK - Passed]
+    //int test_index = total_rows-1;
+    //cout << "-----Testing IDFT values in " + to_string(test_index) + "-------" << endl;
+    //for (int i = 0; i < 10; i++) {
+    //    cout << input_idft.at<Vec2d>(test_index, i) << endl;
+    //}
+    //for (int i = 879; i < 890; i++) {
+    //    cout << input_idft.at<Vec2d>(test_index, i) << endl;
+    //}
+    //cout << "----------End of tests----------" << endl;
 
 
     filtered.reserve(n);
@@ -413,8 +391,7 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
         filtered.push_back(temp_filtframe.clone());
     }
 
-    // Testing the values for the filtered
-
+    // Testing the values for the filtered [OK - Passed]
     //cout << input_idft.at<Vec2d>(0, 0) << endl;
     //cout << input_idft.at<Vec2d>(1, 0) << endl;
     //cout << input_idft.at<Vec2d>(2, 0) << endl;
@@ -424,7 +401,6 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
     //cout << input_idft.at<Vec2d>(6, 0) << endl;
     //cout << input_idft.at<Vec2d>(7, 0) << endl;
     //cout << input_idft.at<Vec2d>(8, 0) << endl;
-
     //cout << filtered[0].at<Vec3d>(0, 0) << endl;
     //cout << filtered[0].at<Vec3d>(0, 1) << endl;
     //cout << filtered[0].at<Vec3d>(0, 2) << endl;
