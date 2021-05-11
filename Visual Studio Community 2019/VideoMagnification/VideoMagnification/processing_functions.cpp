@@ -34,8 +34,8 @@
 using namespace std;
 using namespace cv;
 
-int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, int alpha,
-    int level, double fl, double fh, int samplingRate, int chromAttenuation) 
+int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double alpha,
+    int level, double fl, double fh, int samplingRate, double chromAttenuation) 
 {
 
     /// <summary>
@@ -188,20 +188,6 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, int alpha
         videoOut.write(out_frame);
 
         k++;
-
-        //cout << "Channels: " + to_string(frame.channels()) << endl;
-        //cout << "Size: ";
-        //cout << frame.size << endl;
-        //cout << frame.type() << endl;
-    //    // If the frame is empty, break immediately
-    //    if (frame.empty())
-    //        break;
-    ////    // Display the resulting frame
-    //    imshow("Frame", frame);
-        // Press  ESC on keyboard to exit
-        //char c = (char)waitKey(25);
-        //if (c == 27)
-        //    break;
     }
 
     // When everything done, release the video capture and write object
@@ -212,6 +198,31 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, int alpha
 
     // Closes all the frames
     destroyAllWindows();
+    return 0;
+}
+
+/**
+* Spatial Filtering: Laplacian pyramid
+* Temporal Filtering: substraction of two butterworth lowpass filters
+*                     with cutoff frequencies fh and fl
+*
+* Copyright(c) 2021 Tecnologico de Costa Rica.
+*
+* Authors: Eduardo Moya Bello, Ki - Sung Lim
+* Date : April 2021
+*
+* This work was based on a project EVM
+*
+* Original copyright(c) 2011 - 2012 Massachusetts Institute of Technology,
+* Quanta Research Cambridge, Inc.
+*
+* Original authors : Hao - yu Wu, Michael Rubinstein, Eugene Shih,
+* License : Please refer to the LICENCE file (MIT license)
+* Original date : June 2012
+**/
+int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double alpha, int lambda_c,
+    double fl, double fh, int samplingRate, double chromAttenuation) {
+
     return 0;
 }
 
