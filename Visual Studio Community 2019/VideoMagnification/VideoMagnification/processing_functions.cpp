@@ -115,6 +115,23 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, int alpha
     //cout << filtered_stack[0].at<Vec3d>(0, 1) << endl;
     //cout << filtered_stack[0].at<Vec3d>(0, 2) << endl;
 
+    // Amplify color channels in NTSC
+    //filtered_stack(:, : , : , 1) = filtered_stack(:, : , : , 1).*alpha;
+    //filtered_stack(:, : , : , 2) = filtered_stack(:, : , : , 2).*alpha.*chromAttenuation;
+    //filtered_stack(:, : , : , 3) = filtered_stack(:, : , : , 3).*alpha.*chromAttenuation;
+    for (Mat frame : filtered_stack) {
+        for (int x = 0; x < frame.rows; x++) {
+            for (int y = 0; y < frame.cols; y++) {
+                Vec3d this_pixel = frame.at<Vec3d>(x, y);
+                this_pixel[0] = this_pixel[0] * alpha;
+                this_pixel[1] = this_pixel[1] * alpha * chromAttenuation;
+                this_pixel[2] = this_pixel[2] * alpha * chromAttenuation;
+                frame.at<Vec3d>(x, y) = this_pixel;
+            }
+        }
+    }
+
+
     //for (int i = startIndex; i < endIndex; i++) {
 
     //    Mat frame = Gdown_stack[i];
@@ -257,28 +274,47 @@ vector<Mat> build_GDown_stack(string vidFile, int startIndex, int endIndex, int 
 * Code translated to C++
 * Author: Ki - Sung Lim
 * Date: May 2021
+* 
+* --Notes--
+* The commented sections that say "test" or "testing" are manual tests that were applied to the
+* method or algorithm before them. You can just ignore them or use them if you want to check
+* the results.
 **/
 vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, int samplingRate)
 {
 
-    // Comprobation of the dimentions
+    /*
+    Comprobation of the dimention 
+    It is so 'dim' doesn't excede the actual dimension of the input
+
+    In Matlab you can shift the dimentions of a matrix, for example, 3x4x3 can be shifted to 4x3x3
+    with the same values stored in the correspondant dimension.
+    Here (C++) it is not applied any shifting, yet.
+    */
     if (dim > 1 + input[0].channels()) {
         cout << "Exceed maximun dimension" << endl;
         exit(1);
     }
 
+    // Printing the cut frequencies
     cout << "F1: " + to_string(wl) + " F2: " + to_string(wh) << endl;
 
     vector<Mat> filtered;
 
+    // Number of frames in the video
+    // Represents time
     int n = (int) input.size();
 
+    // Temporal vector that's constructed for the mask
+    // iota is used to fill the vector with a integer sequence 
+    // [0, 1, 2, ..., n]
     vector<int> Freq_temp(n);
     iota(begin(Freq_temp), end(Freq_temp), 0); //0 is the starting number
 
+    // Initialize the cv::Mat with the temp vector and without copying values
     Mat Freq(Freq_temp, false);
     double alpha = (double)samplingRate / (double)n;
-    Freq.convertTo(Freq, CV_64FC1, alpha);
+    Freq.convertTo(Freq, CV_64FC1, alpha); // alpha is mult to every value
     
     // Testing the values in Freq [OK]
     //cout << Freq.at<double>(0, 0) << endl;
@@ -289,7 +325,7 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
     //cout << Freq.at<double>(79, 0) << endl;
     //cout << Freq.at<double>(80, 0) << endl;
 
-    Mat mask = (Freq > wl) & (Freq < wh);
+    Mat mask = (Freq > wl) & (Freq < wh); // creates a boolean matrix/mask
 
     // Testing the values in the mask [OK]
     //cout << mask.at<bool>(0, 0) << endl;
@@ -300,11 +336,37 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
     //cout << mask.at<bool>(79, 0) << endl;
     //cout << mask.at<bool>(80, 0) << endl;
 
+    // Sum of rows, columns and color channels of a single cv::Mat in input
     int total_rows = input[0].rows * input[0].cols * input[0].channels();
 
+     /*
+     Temporal matrix that is constructed so the DFT method (Discrete Fourier Transform)
+     that OpenCV provides can be used. The most common use for the DFT in image 
+     processing is the 2-D DFT, in this case we want 1-D DFT for every pixel time vector.
+     Every row of the matrix is the timeline of an specific pixel.
+     The structure of temp_dft is:
+
+     [
+          [pixel_0000, pixel_1000, pixel_2000, ..., pixel_n000],
+          [pixel_0001, pixel_1001, pixel_2001, ..., pixel_n001],
+          [pixel_0002, pixel_1002, pixel_2002, ..., pixel_n002],
+          [pixel_0010, pixel_1010, pixel_2010, ..., pixel_n010],
+          .
+          .
+          .
+          [pixel_0xy0, pixel_1xy0, pixel_2xy0, ..., pixel_nxy0],
+          .
+          .
+          .
+          [pixel_0xy3, pixel_1xy3, pixel_2xy3, ..., pixel_nxy0],
+     ]
+      
+     If you didn't see it: pixel_time-row/x-col/y-colorchannel
+     */
     Mat temp_dft(total_rows, n, CV_64FC1);
 
     int pos_temp = 0;
+    // Here we populate the forementioned matrix
     for (int x = 0; x < input[0].rows; x++) {
         for (int y = 0; y < input[0].cols; y++) {
             
@@ -328,10 +390,11 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
     //}
     //cout << input[test_index].at<Vec3d>(5, 9) << endl;
     //cout << "----------End of tests----------" << endl;
+    
+    Mat input_dft, input_idft; // For DFT input / output 
 
-
-    Mat input_dft, input_idft;
-
+    // 1-D DFT applied for every row, complex output 
+    // (2 value real-complex vector)
     dft(temp_dft, input_dft, DFT_ROWS | DFT_COMPLEX_OUTPUT);
 
     // Testing the values in the transformation DFT [OK - Passed]
@@ -355,6 +418,8 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
         }
     }
 
+    // 1-D inverse DFT applied for every row, complex output 
+    // Only the real part is importante
     idft(input_dft, input_idft, DFT_ROWS | DFT_COMPLEX_INPUT | DFT_SCALE);
 
     // Testing the values for the transformation IDFT [OK - Passed]
@@ -368,15 +433,15 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
     //}
     //cout << "----------End of tests----------" << endl;
 
+    filtered.reserve(n); // Reserving heap memory space for the output
 
-    filtered.reserve(n);
-
+    // Reording the matrix to a vector of matrixes, 
+    // contrary of what was done for temp_dft
     for (int i = 0; i < n; i++) {
         Mat temp_filtframe(input[0].rows, input[0].cols, CV_64FC3);
         pos_temp = 0;
         for (int x = 0; x < input[0].rows; x++) {
             for (int y = 0; y < input[0].cols; y++) {
-
 
                 Vec3d pix_colors;
                 pix_colors[0] = input_idft.at<Vec2d>(pos_temp, i)[0];
