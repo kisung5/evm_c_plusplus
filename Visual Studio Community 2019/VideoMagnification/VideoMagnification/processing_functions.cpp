@@ -51,9 +51,21 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, int alpha
     /// <param name="chromAttenuation"></param>
     /// <returns></returns>
 
+    string name;
+    string delimiter = "/";
+
+    size_t last = 0; size_t next = 0; 
+    while ((next = inFile.find(delimiter, last)) != string::npos) { 
+
+        last = next + 1; 
+    } 
+
+    name = inFile.substr(last);
+    name = name.substr(0, name.find("."));
+    cout << name << endl;
 
     // Creates the result video name
-    string outName = outDir + inFile + "-ideal-from-" + to_string(fl) + "-to-" +
+    string outName = outDir + name + "-ideal-from-" + to_string(fl) + "-to-" +
         to_string(fh) + "-alpha-" + to_string(alpha) + "-level-" + to_string(level) +
         "-chromAtn-" + to_string(chromAttenuation) + ".avi";
 
@@ -116,9 +128,6 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, int alpha
     //cout << filtered_stack[0].at<Vec3d>(0, 2) << endl;
 
     // Amplify color channels in NTSC
-    //filtered_stack(:, : , : , 1) = filtered_stack(:, : , : , 1).*alpha;
-    //filtered_stack(:, : , : , 2) = filtered_stack(:, : , : , 2).*alpha.*chromAttenuation;
-    //filtered_stack(:, : , : , 3) = filtered_stack(:, : , : , 3).*alpha.*chromAttenuation;
     for (Mat frame : filtered_stack) {
         for (int x = 0; x < frame.rows; x++) {
             for (int y = 0; y < frame.cols; y++) {
@@ -131,36 +140,75 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, int alpha
         }
     }
 
+    // Render on the input video to make the output video
+    cout << "Rendering... ";
+    int k = 0;
+    for (int i = startIndex; i < endIndex; i++) {
 
-    //for (int i = startIndex; i < endIndex; i++) {
+        Mat frame, rgbframe, ntscframe, filt_ind, filtered, out_frame;
+        // Capture frame-by-frame
+        video >> frame;
 
-    //    Mat frame = Gdown_stack[i];
-    //    // Capture frame-by-frame
-    //    //video >> frame;
+        // Color conversion GBR 2 NTSC
+        cvtColor(frame, rgbframe, COLOR_BGR2RGB);
+        rgbframe = im2double(rgbframe);
+        ntscframe = rgb2ntsc(rgbframe);
 
-    ////    //cout << "Channels: " + to_string(frame.channels()) << endl;
-    ////    //cout << "Size: ";
-    ////    //cout << frame.size << endl;
-    ////    //cout << frame.type() << endl;
+        filt_ind = filtered_stack[k];
 
+        Size img_size(vidWidth, vidHeight);//the dst image size,e.g.100x100
+        resize(filt_ind, filtered, img_size, 0, 0, INTER_CUBIC);//resize image
+
+        filtered = filtered + ntscframe;
+
+        frame = ntsc2rgb(filtered);
+
+        for (int x = 0; x < frame.rows; x++) {
+            for (int y = 0; y < frame.cols; y++) {
+                Vec3d this_pixel = frame.at<Vec3d>(x, y);
+                for (int z = 0; z < 3; z++) {
+                    if (this_pixel[z] > 1) {
+                        this_pixel[z] = 1;
+                    }
+                    
+                    if (this_pixel[z] < 0) {
+                        this_pixel[z] = 0;
+                    }
+                }
+
+                frame.at<Vec3d>(x, y) = this_pixel;
+            }
+        }
+
+        rgbframe = im2uint8(frame);
+
+        cvtColor(rgbframe, out_frame, COLOR_RGB2BGR);
+
+        // Write the frame into the file 'outcpp.avi'
+        videoOut.write(out_frame);
+
+        k++;
+
+        //cout << "Channels: " + to_string(frame.channels()) << endl;
+        //cout << "Size: ";
+        //cout << frame.size << endl;
+        //cout << frame.type() << endl;
     //    // If the frame is empty, break immediately
     //    if (frame.empty())
     //        break;
-
     ////    // Display the resulting frame
     //    imshow("Frame", frame);
-
-    //    // Press  ESC on keyboard to exit
-    //    char c = (char)waitKey(25);
-    //    if (c == 27)
-    //        break;
-    //    
-    //    //break;
-    //}
+        // Press  ESC on keyboard to exit
+        //char c = (char)waitKey(25);
+        //if (c == 27)
+        //    break;
+    }
 
     // When everything done, release the video capture and write object
     video.release();
     videoOut.release();
+
+    cout << "Finished" << endl;
 
     // Closes all the frames
     destroyAllWindows();
