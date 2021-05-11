@@ -18,5 +18,51 @@
     <ClCompile Include="Source.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="processing_functions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="im_conv.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Media Include="vid\baby.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\baby2.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\camera.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\face.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\face2.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\guitar.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\shadow.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\subway.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\wrist.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="processing_functions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="im_conv.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
