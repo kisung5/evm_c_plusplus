@@ -1,3 +1,6 @@
+}
+
+
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -530,4 +533,149 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
     //cout << filtered[0].at<Vec3d>(0, 2) << endl;
 
     return filtered;
+}
+
+/**
+* Spatial Filtering : Gaussian blurand down sample
+* Temporal Filtering : Ideal bandpass
+*
+* Copyright(c) 2021 Tecnologico de Costa Rica.
+*
+* Authors: Eduardo Moya Bello, Ki - Sung Lim
+* Date : April 2021
+*
+* This work was based on a project EVM
+*
+* Original copyright(c) 2011 - 2012 Massachusetts Institute of Technology,
+* Quanta Research Cambridge, Inc.
+*
+* Original authors : Hao - yu Wu, Michael Rubinstein, Eugene Shih,
+* License : Please refer to the LICENCE file (MIT license)
+* Original date : June 2012
+**/
+
+constexpr auto MAX_FILTER_SIZE = 5;
+constexpr auto PYR_BORDER_TYPE = 2;
+
+int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
+    int lambda_c, double fl, double fh, int samplingRate, int chromAttenuation) {
+    // Creates the result video name
+    string outName = outDir + inFile + "-ideal-from-" + to_string(fl) + "-to-" +
+        to_string(fh) + "-alpha-" + to_string(alpha) + "-lambda_c-" + to_string(lambda_c) +
+        "-chromAtn-" + to_string(chromAttenuation) + ".avi";
+
+    setBreakOnError(true);
+    // Create a VideoCapture object and open the input file
+    // If the input is the web camera, pass 0 instead of the video file name
+    //VideoCapture video(0);
+    VideoCapture video(inFile);
+
+    // Check if video opened successfully
+    if (!video.isOpened()) {
+        cout << "Error opening video stream or file" << endl;
+        return -1;
+    }
+
+    // Extract video info
+    int vidHeight = video.get(CAP_PROP_FRAME_HEIGHT);
+    int vidWidth = video.get(CAP_PROP_FRAME_WIDTH);
+    int nChannels = 3;
+    int fr = video.get(CAP_PROP_FPS);
+    int len = video.get(CAP_PROP_FRAME_COUNT);
+
+    // Compute maximum pyramid height for every frame
+    int max_ht = 1 + maxPyrHt(vidWidth, vidHeight, MAX_FILTER_SIZE, MAX_FILTER_SIZE);
+
+    // Define variables
+    Mat frame;
+    Mat newFrame;
+    vector<Mat> pyr_stack;
+
+    while (1) {
+        // Capture frame-by-frame
+        video >> frame;
+
+        // If the frame is empty, break immediately
+        if (frame.empty())
+            break;
+
+        // Modify the frame for the implementation
+        cvtColor(frame, newFrame, COLOR_BGR2RGB);
+        newFrame = im2double(frame);
+        newFrame = rgb2ntsc(frame);
+
+        pyr_stack = build_Lpyr_stack(newFrame, max_ht);
+
+        //vector<Mat> filtered_stack = ideal_bandpassing(pyr_stack, 3, fl, fh, samplingRate);
+
+        //const Mat lFrame = lpyr[0];
+        //double value = lFrame.at<double>(1, 0);
+
+        // Display the resulting frame
+        imshow("Frame", frame);
+        imshow("New Frame", newFrame);
+        imshow("Lpyr lvl 0", pyr_stack[0]);
+        //
+        /*
+        imshow("Lpyr lvl 1", lpyr[1]);
+        imshow("Lpyr lvl 2", lpyr[2]);
+        imshow("Lpyr lvl 3", lpyr[3]);
+        imshow("Lpyr lvl 4", lpyr[4]);
+        imshow("Lpyr lvl 5", lpyr[5]);
+        imshow("Lpyr lvl 6", lpyr[6]);
+        imshow("Lpyr lvl 7", lpyr[7]);
+        */
+
+        // Press  ESC on keyboard to exit
+        char c = (char)waitKey(25);
+        if (c == 27)
+            break;
+
+    }
+
+    // When everything done, release the video capture object
+    video.release();
+
+    // Closes all the frames
+    destroyAllWindows();
+
+    return 0;
+}
+
+
+int maxPyrHt(int frameWidth, int frameHeight, int filterSizeX, int filterSizeY) {
+    // 1D image
+    if (frameWidth == 1 || frameHeight == 1) {
+        frameWidth = frameHeight = 1;
+        filterSizeX = filterSizeY = filterSizeX * filterSizeY;
+    }
+    // 2D image
+    else if (filterSizeX == 1 || filterSizeY == 1) {
+        filterSizeY = filterSizeX;
+    }
+    // Stop condition
+    if (frameWidth < filterSizeX || frameWidth < filterSizeY ||
+        frameHeight < filterSizeX || frameHeight < filterSizeY)
+    {
+        return 0;
+    }
+    // Next level
+    else {
+        return 1 + maxPyrHt(frameWidth / 2, frameHeight / 2, filterSizeX, filterSizeY);
+    }
+}
+
+
+vector<Mat> build_Lpyr_stack(Mat image, int levels) {
+    vector<Mat> laplacianPyramid;
+    Mat up, down, lap;
+    for (int l = 0; l < levels - 1; l++) {
+        pyrDown(image, down);
+        pyrUp(down, up, Size(image.cols, image.rows));
+        lap = image - up;
+        laplacianPyramid.push_back(lap);
+        image = down;
+    }
+    laplacianPyramid.push_back(image);
+    return laplacianPyramid;
 }
