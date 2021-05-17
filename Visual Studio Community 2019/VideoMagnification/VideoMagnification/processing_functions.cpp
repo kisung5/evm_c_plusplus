@@ -16,6 +16,16 @@ extern "C" {
     #include "ellf.h"
 }
 
+
+using namespace std;
+using namespace std::chrono;
+using namespace cv;
+
+extern "C" int butter_coeff(int, int, double, double);
+
+constexpr auto MAX_FILTER_SIZE = 5;
+constexpr auto PYR_BORDER_TYPE = 2;
+
 /**
 * Spatial Filtering : Gaussian blurand down sample
 * Temporal Filtering : Ideal bandpass
@@ -24,9 +34,9 @@ extern "C" {
 *
 * Authors: Eduardo Moya Bello, Ki - Sung Lim
 * Date : April 2021
-* 
+*
 * This work was based on a project EVM
-* 
+*
 * Original copyright(c) 2011 - 2012 Massachusetts Institute of Technology,
 * Quanta Research Cambridge, Inc.
 *
@@ -34,13 +44,6 @@ extern "C" {
 * License : Please refer to the LICENCE file (MIT license)
 * Original date : June 2012
 **/
-
-using namespace std;
-using namespace std::chrono;
-using namespace cv;
-
-extern "C" int butter_coeff(int, int, double, double);
-
 int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double alpha,
     int level, double fl, double fh, int samplingRate, double chromAttenuation) 
 {
@@ -49,7 +52,6 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
 
     size_t last = 0; size_t next = 0; 
     while ((next = inFile.find(delimiter, last)) != string::npos) { 
-
         last = next + 1; 
     } 
 
@@ -79,7 +81,6 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
     int nChannels = 3;
     int fr = (int)video.get(CAP_PROP_FPS);
     int len = (int)video.get(CAP_PROP_FRAME_COUNT);
-
     int startIndex = 0;
     int endIndex = len - 10;
 
@@ -127,8 +128,12 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
     // Amplify color channels in NTSC
     // Get starting timepoint
     start = high_resolution_clock::now();
+    int ind_amp = 0;
+    Scalar color_amp(alpha, alpha * chromAttenuation, alpha * chromAttenuation);
     for (Mat frame : filtered_stack) {
-        for (int x = 0; x < frame.rows; x++) {
+        Mat frame_result;
+        multiply(frame, color_amp, frame_result);
+        /*for (int x = 0; x < frame.rows; x++) {
             for (int y = 0; y < frame.cols; y++) {
                 Vec3d this_pixel = frame.at<Vec3d>(x, y);
                 this_pixel[0] = this_pixel[0] * alpha;
@@ -136,7 +141,9 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
                 this_pixel[2] = this_pixel[2] * alpha * chromAttenuation;
                 frame.at<Vec3d>(x, y) = this_pixel;
             }
-        }
+        }*/
+        filtered_stack[ind_amp] = frame_result;
+        ind_amp++;
     }
     // Get ending timepoint
     stop = high_resolution_clock::now();
@@ -169,22 +176,23 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
 
         frame = ntsc2rgb(filtered);
 
-        for (int x = 0; x < frame.rows; x++) {
-            for (int y = 0; y < frame.cols; y++) {
-                Vec3d this_pixel = frame.at<Vec3d>(x, y);
-                for (int z = 0; z < 3; z++) {
-                    if (this_pixel[z] > 1) {
-                        this_pixel[z] = 1;
-                    }
-                    
-                    if (this_pixel[z] < 0) {
-                        this_pixel[z] = 0;
-                    }
-                }
+        threshold(frame, out_frame, 0.0f, 0.0f, THRESH_TOZERO);
+        threshold(out_frame, frame, 1.0f, 1.0f, THRESH_TRUNC);
 
-                frame.at<Vec3d>(x, y) = this_pixel;
-            }
-        }
+        //for (int x = 0; x < frame.rows; x++) {
+        //    for (int y = 0; y < frame.cols; y++) {
+        //        Vec3d this_pixel = frame.at<Vec3d>(x, y);
+        //        for (int z = 0; z < 3; z++) {
+        //            if (this_pixel[z] > 1) {
+        //                this_pixel[z] = 1;
+        //            }
+        //            if (this_pixel[z] < 0) {
+        //                this_pixel[z] = 0;
+        //            }
+        //        }
+        //        frame.at<Vec3d>(x, y) = this_pixel;
+        //    }
+        //}
 
         rgbframe = im2uint8(frame);
 
@@ -199,13 +207,13 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
     stop = high_resolution_clock::now();
     // Get duration. Substart timepoints to get durarion.
     duration = duration_cast<microseconds>(stop - start);
-    cout << "Time amplify: " << duration.count() << " microseconds" << endl;
+    cout << "Finished" << endl;
+    cout << "Time rendering: " << duration.count() << " microseconds" << endl;
 
     // When everything done, release the video capture and write object
     video.release();
     videoOut.release();
 
-    cout << "Finished" << endl;
 
     // Closes all the frames
     destroyAllWindows();
@@ -308,6 +316,67 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
     rgbframe = im2double(rgbframe);
     ntscframe = rgb2ntsc(rgbframe);
 
+    // Compute maximum pyramid height for every frame
+    int max_ht = 1 + maxPyrHt(vidWidth, vidHeight, MAX_FILTER_SIZE, MAX_FILTER_SIZE);
+
+    // Render on the input video to make the output video
+    cout << "Rendering... ";
+    int k = 0;
+    // Get starting timepoint
+    for (int i = startIndex + 1; i < endIndex; i++) {
+
+        Mat filt_ind, filtered, out_frame;
+        // Capture frame-by-frame
+        video >> frame;
+
+        // Color conversion GBR 2 NTSC
+        cvtColor(frame, rgbframe, COLOR_BGR2RGB);
+        rgbframe = im2double(rgbframe);
+        ntscframe = rgb2ntsc(rgbframe);
+
+        //filt_ind = filtered_stack[k];
+
+        Size img_size(vidWidth, vidHeight);//the dst image size,e.g.100x100
+        resize(filt_ind, filtered, img_size, 0, 0, INTER_CUBIC);//resize image
+
+        filtered = filtered + ntscframe;
+
+        frame = ntsc2rgb(filtered);
+
+        for (int x = 0; x < frame.rows; x++) {
+            for (int y = 0; y < frame.cols; y++) {
+                Vec3d this_pixel = frame.at<Vec3d>(x, y);
+                for (int z = 0; z < 3; z++) {
+                    if (this_pixel[z] > 1) {
+                        this_pixel[z] = 1;
+                    }
+                    if (this_pixel[z] < 0) {
+                        this_pixel[z] = 0;
+                    }
+                }
+                frame.at<Vec3d>(x, y) = this_pixel;
+            }
+        }
+
+        rgbframe = im2uint8(frame);
+
+        cvtColor(rgbframe, out_frame, COLOR_RGB2BGR);
+
+        // Write the frame into the file 'outcpp.avi'
+        videoOut.write(out_frame);
+
+        k++;
+    }
+
+    // When everything done, release the video capture and write object
+    video.release();
+    videoOut.release();
+
+    cout << "Finished" << endl;
+
+    // Closes all the frames
+    destroyAllWindows();
+
     return 0;
 }
 
@@ -365,20 +434,8 @@ vector<Mat> build_GDown_stack(string vidFile, int startIndex, int endIndex, int 
         video >> frame;
 
         cvtColor(frame, rgbframe, COLOR_BGR2RGB);
-
-        //cout << rgbframe.at<Vec3b>(0, 0) << endl;
-        //cout << rgbframe.at<Vec3b>(0, 1) << endl;
-        //cout << rgbframe.at<Vec3b>(0, 2) << endl;
-
         rgbframe = im2double(rgbframe);
-        //cout << rgbframe.at<Vec3d>(0, 0) << endl;
-        //cout << rgbframe.at<Vec3d>(0, 1) << endl;
-        //cout << rgbframe.at<Vec3d>(0, 2) << endl;
-
         ntscframe = rgb2ntsc(rgbframe);
-        //cout << ntscframe.at<Vec3d>(0, 0) << endl;
-        //cout << rgbframe.at<Vec3b>(0, 1) << endl;
-        //cout << rgbframe.at<Vec3b>(0, 2) << endl;
 
         buildPyramid(ntscframe, pyr_output, level+1, BORDER_REFLECT101);
 
@@ -604,8 +661,6 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
 * License : Please refer to the LICENCE file (MIT license)
 * Original date : June 2012
 **/
-constexpr auto MAX_FILTER_SIZE = 5;
-constexpr auto PYR_BORDER_TYPE = 2;
 
 int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
     int lambda_c, double fl, double fh, int samplingRate, int chromAttenuation) {
