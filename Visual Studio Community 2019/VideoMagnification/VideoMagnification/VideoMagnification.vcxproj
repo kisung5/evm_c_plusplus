@@ -19,8 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="cmplx.c" />
+    <ClCompile Include="const.c" />
+    <ClCompile Include="ellf.c" />
     <ClCompile Include="im_conv.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="mtherr.c" />
     <ClCompile Include="processing_functions.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -35,6 +39,7 @@
     <Media Include="vid\wrist.mp4" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ellf.h" />
     <ClInclude Include="im_conv.h" />
     <ClInclude Include="processing_functions.h" />
   </ItemGroup>
@@ -98,8 +103,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\opencv\build\include;C:\opencv\build\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\opencv\build\x64\vc15\lib;C:\opencv\build\x64\vc15\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\opencv\build\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\opencv\build\x64\vc15\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>

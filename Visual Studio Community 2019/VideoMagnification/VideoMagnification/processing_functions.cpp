@@ -1,6 +1,3 @@
-}
-
-
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -14,6 +11,10 @@
 
 #include "processing_functions.h"
 #include "im_conv.h"
+
+extern "C" {
+    #include "ellf.h"
+}
 
 /**
 * Spatial Filtering : Gaussian blurand down sample
@@ -35,25 +36,14 @@
 **/
 
 using namespace std;
+using namespace std::chrono;
 using namespace cv;
+
+extern "C" int butter_coeff(int, int, double, double);
 
 int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double alpha,
     int level, double fl, double fh, int samplingRate, double chromAttenuation) 
 {
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="inFile"></param>
-    /// <param name="outDir"></param>
-    /// <param name="alpha"></param>
-    /// <param name="level"></param>
-    /// <param name="fl"></param>
-    /// <param name="fh"></param>
-    /// <param name="samplingRate"></param>
-    /// <param name="chromAttenuation"></param>
-    /// <returns></returns>
-
     string name;
     string delimiter = "/";
 
@@ -94,20 +84,26 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
     int endIndex = len - 10;
 
     // Testing values
-    //cout << vidHeight << endl;
-    //cout << vidWidth << endl;
-    //cout << fr << endl;
-    cout << len << endl;
+    cout << "Video information: Height-" << vidHeight << " Width-" << vidWidth 
+        << " FrameRate-" << fr << " Frames-" << len << endl;
 
     // Write video
     // Define the codec and create VideoWriter object
     VideoWriter videoOut(outName, VideoWriter::fourcc('M', 'J', 'P', 'G'), fr, 
         Size(vidWidth, vidHeight));
-
     
     // Compute Gaussian blur stack
     cout << "Spatial filtering... " << endl;
+    // Get starting timepoint
+    auto start = high_resolution_clock::now();
     vector<Mat> Gdown_stack = build_GDown_stack(inFile, startIndex, endIndex, level);
+    // Get ending timepoint
+    auto stop = high_resolution_clock::now();
+    // Get duration. Substart timepoints to 
+    // get durarion. To cast it to proper unit
+    // use duration cast method
+    auto duration = duration_cast<microseconds>(stop - start);
+    cout << "Time spatial filtering: " << duration.count() << " microseconds" << endl;
     cout << "Finished" << endl;
 
     // Getting the final Gdown Stack sizes same as Matlab code
@@ -116,21 +112,21 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
         " cols-" + to_string(Gdown_stack[0].cols) + 
         " channels-" + to_string(Gdown_stack[0].channels()) << endl;
 
-    // Testing spatial filtering values
-    //cout << Gdown_stack[0].at<Vec3d>(0, 0) << endl;
-    //cout << Gdown_stack[0].at<Vec3d>(0, 1) << endl;
-
     // Temporal filtering
     cout << "Temporal filtering... " << endl;
+    // Get starting timepoint
+    start = high_resolution_clock::now();
     vector<Mat> filtered_stack = ideal_bandpassing(Gdown_stack, 1, fl, fh, samplingRate);
+    // Get ending timepoint
+    stop = high_resolution_clock::now();
+    // Get duration. Substart timepoints to get durarion.
+    duration = duration_cast<microseconds>(stop - start);
+    cout << "Time temporal filtering: " << duration.count() << " microseconds" << endl;
     cout << "Finished" << endl;
 
-    // Testing temporal filtering values
-    //cout << filtered_stack[0].at<Vec3d>(0, 0) << endl;
-    //cout << filtered_stack[0].at<Vec3d>(0, 1) << endl;
-    //cout << filtered_stack[0].at<Vec3d>(0, 2) << endl;
-
     // Amplify color channels in NTSC
+    // Get starting timepoint
+    start = high_resolution_clock::now();
     for (Mat frame : filtered_stack) {
         for (int x = 0; x < frame.rows; x++) {
             for (int y = 0; y < frame.cols; y++) {
@@ -142,10 +138,17 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
             }
         }
     }
+    // Get ending timepoint
+    stop = high_resolution_clock::now();
+    // Get duration. Substart timepoints to get durarion.
+    duration = duration_cast<microseconds>(stop - start);
+    cout << "Time amplify: " << duration.count() << " microseconds" << endl;
 
     // Render on the input video to make the output video
     cout << "Rendering... ";
     int k = 0;
+    // Get starting timepoint
+    start = high_resolution_clock::now();
     for (int i = startIndex; i < endIndex; i++) {
 
         Mat frame, rgbframe, ntscframe, filt_ind, filtered, out_frame;
@@ -192,6 +195,11 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
 
         k++;
     }
+    // Get ending timepoint
+    stop = high_resolution_clock::now();
+    // Get duration. Substart timepoints to get durarion.
+    duration = duration_cast<microseconds>(stop - start);
+    cout << "Time amplify: " << duration.count() << " microseconds" << endl;
 
     // When everything done, release the video capture and write object
     video.release();
@@ -225,6 +233,80 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
 **/
 int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double alpha, int lambda_c,
     double fl, double fh, int samplingRate, double chromAttenuation) {
+
+    // Coefficients for IIR butterworth filter
+    //[low_a, low_b] = butter(1, fl / samplingRate, 'low');
+    //[high_a, high_b] = butter(1, fh / samplingRate, 'low');
+
+    butter_coeff(1, 1, samplingRate*2, fl);
+    Vec2d low_a(pp[0], pp[1]); 
+    Vec2d high_a(aa[0], aa[1]); 
+    //cout << pp[0] << " " << pp[1] << " " << aa[0] << " " << aa[1] << endl;
+
+    butter_coeff(1, 1, samplingRate * 2, fh);
+    Vec2d low_b(pp[0], pp[1]);
+    Vec2d high_b(aa[0], aa[1]);
+    //cout << pp[0] << " " << pp[1] << " " << aa[0] << " " << aa[1] << endl;
+
+    // Out video preparation
+
+    string name;
+    string delimiter = "/";
+
+    size_t last = 0; size_t next = 0;
+    while ((next = inFile.find(delimiter, last)) != string::npos) {
+        last = next + 1;
+    }
+
+    name = inFile.substr(last);
+    name = name.substr(0, name.find("."));
+    cout << name << endl;
+
+    // Creates the result video name
+    string outName = outDir + name + "-butter-from-" + to_string(fl) + "-to-" +
+        to_string(fh) + "-alpha-" + to_string(alpha) + "-lambda_c-" + to_string(lambda_c) +
+        "-chromAtn-" + to_string(chromAttenuation) + ".avi";
+
+    // Read video
+    // Create a VideoCapture object and open the input file
+    // If the input is the web camera, pass 0 instead of the video file name
+    VideoCapture video(inFile);
+
+    // Check if camera opened successfully
+    if (!video.isOpened()) {
+        cout << "Error opening video stream or file" << endl;
+        return -1;
+    }
+
+    // Extracting video info
+    int vidHeight = (int)video.get(CAP_PROP_FRAME_HEIGHT);
+    int vidWidth = (int)video.get(CAP_PROP_FRAME_WIDTH);
+    int nChannels = 3;
+    int fr = (int)video.get(CAP_PROP_FPS);
+    int len = (int)video.get(CAP_PROP_FRAME_COUNT);
+    int startIndex = 0;
+    int endIndex = len - 10;
+
+    // Testing values
+    cout << "Video information: Height-" << vidHeight << " Width-" << vidWidth
+        << " FrameRate-" << fr << " Frames-" << len << endl;
+
+    // Write video
+    // Define the codec and create VideoWriter object
+    VideoWriter videoOut(outName, VideoWriter::fourcc('M', 'J', 'P', 'G'), fr,
+        Size(vidWidth, vidHeight));
+
+
+    // First frame
+    Mat frame, rgbframe, ntscframe;
+    vector<Mat> pyr_output;
+    // Capture frame-by-frame
+    video >> frame;
+
+    // BGR to NTSC frame color space
+    cvtColor(frame, rgbframe, COLOR_BGR2RGB);
+    rgbframe = im2double(rgbframe);
+    ntscframe = rgb2ntsc(rgbframe);
 
     return 0;
 }
@@ -377,26 +459,8 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
     Mat Freq(Freq_temp, false);
     double alpha = (double)samplingRate / (double)n;
     Freq.convertTo(Freq, CV_64FC1, alpha); // alpha is mult to every value
-    
-    // Testing the values in Freq [OK]
-    //cout << Freq.at<double>(0, 0) << endl;
-    //cout << Freq.at<double>(1, 0) << endl;
-    //cout << Freq.at<double>(69, 0) << endl;
-    //cout << Freq.at<double>(70, 0) << endl;
-    //cout << Freq.at<double>(71, 0) << endl;
-    //cout << Freq.at<double>(79, 0) << endl;
-    //cout << Freq.at<double>(80, 0) << endl;
 
     Mat mask = (Freq > wl) & (Freq < wh); // creates a boolean matrix/mask
-
-    // Testing the values in the mask [OK]
-    //cout << mask.at<bool>(0, 0) << endl;
-    //cout << mask.at<bool>(1, 0) << endl;
-    //cout << mask.at<bool>(69, 0) << endl;
-    //cout << mask.at<bool>(70, 0) << endl;
-    //cout << mask.at<bool>(71, 0) << endl;
-    //cout << mask.at<bool>(79, 0) << endl;
-    //cout << mask.at<bool>(80, 0) << endl;
 
     // Sum of rows, columns and color channels of a single cv::Mat in input
     int total_rows = input[0].rows * input[0].cols * input[0].channels();
@@ -518,22 +582,9 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
         filtered.push_back(temp_filtframe.clone());
     }
 
-    // Testing the values for the filtered [OK - Passed]
-    //cout << input_idft.at<Vec2d>(0, 0) << endl;
-    //cout << input_idft.at<Vec2d>(1, 0) << endl;
-    //cout << input_idft.at<Vec2d>(2, 0) << endl;
-    //cout << input_idft.at<Vec2d>(3, 0) << endl;
-    //cout << input_idft.at<Vec2d>(4, 0) << endl;
-    //cout << input_idft.at<Vec2d>(5, 0) << endl;
-    //cout << input_idft.at<Vec2d>(6, 0) << endl;
-    //cout << input_idft.at<Vec2d>(7, 0) << endl;
-    //cout << input_idft.at<Vec2d>(8, 0) << endl;
-    //cout << filtered[0].at<Vec3d>(0, 0) << endl;
-    //cout << filtered[0].at<Vec3d>(0, 1) << endl;
-    //cout << filtered[0].at<Vec3d>(0, 2) << endl;
-
     return filtered;
 }
+
 
 /**
 * Spatial Filtering : Gaussian blurand down sample
@@ -553,7 +604,6 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
 * License : Please refer to the LICENCE file (MIT license)
 * Original date : June 2012
 **/
-
 constexpr auto MAX_FILTER_SIZE = 5;
 constexpr auto PYR_BORDER_TYPE = 2;
 
@@ -577,11 +627,11 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
     }
 
     // Extract video info
-    int vidHeight = video.get(CAP_PROP_FRAME_HEIGHT);
-    int vidWidth = video.get(CAP_PROP_FRAME_WIDTH);
+    int vidHeight = (int)video.get(CAP_PROP_FRAME_HEIGHT);
+    int vidWidth = (int)video.get(CAP_PROP_FRAME_WIDTH);
     int nChannels = 3;
-    int fr = video.get(CAP_PROP_FPS);
-    int len = video.get(CAP_PROP_FRAME_COUNT);
+    int fr = (int)video.get(CAP_PROP_FPS);
+    int len = (int)video.get(CAP_PROP_FRAME_COUNT);
 
     // Compute maximum pyramid height for every frame
     int max_ht = 1 + maxPyrHt(vidWidth, vidHeight, MAX_FILTER_SIZE, MAX_FILTER_SIZE);

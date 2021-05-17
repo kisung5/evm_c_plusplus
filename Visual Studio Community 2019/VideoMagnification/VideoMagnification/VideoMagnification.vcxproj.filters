@@ -27,6 +27,18 @@
     <ClCompile Include="im_conv.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cmplx.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="const.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ellf.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mtherr.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Media Include="vid\baby.mp4">
@@ -62,6 +74,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="im_conv.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ellf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
