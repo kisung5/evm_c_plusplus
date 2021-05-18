@@ -11,6 +11,10 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
 
 int maxPyrHt(int frameWidth, int frameHeight, int filterSizeX, int filterSizeY);
 
-vector<Mat> build_Lpyr_stack(Mat image, int levels);
+vector<Mat> buildLpyr(Mat image, int levels);
 
-vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, int samplingRate);
+vector<vector<Mat>> build_Lpyr_stack(string vidFile, int startIndex, int endIndex);
+
+vector<vector<Mat>> ideal_bandpassing_lpyr(vector<vector<Mat>> input, int dim, double wl, double wh, int samplingRate);
+
+vector<vector<Mat>> ideal_bandpassing_lpyr(vector<vector<Mat>> input, int dim, double wl, double wh, int samplingRate);
