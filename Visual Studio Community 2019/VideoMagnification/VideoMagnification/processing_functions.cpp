@@ -130,6 +130,7 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
     start = high_resolution_clock::now();
     int ind_amp = 0;
     Scalar color_amp(alpha, alpha * chromAttenuation, alpha * chromAttenuation);
+
     for (Mat frame : filtered_stack) {
         Mat frame_result;
         multiply(frame, color_amp, frame_result);
@@ -156,6 +157,7 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
     int k = 0;
     // Get starting timepoint
     start = high_resolution_clock::now();
+
     for (int i = startIndex; i < endIndex; i++) {
 
         Mat frame, rgbframe, ntscframe, filt_ind, filtered, out_frame;
