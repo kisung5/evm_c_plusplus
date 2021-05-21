@@ -1,3 +1,4 @@
+#include <omp.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -131,21 +132,17 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
     int ind_amp = 0;
     Scalar color_amp(alpha, alpha * chromAttenuation, alpha * chromAttenuation);
 
+
+//#pragma omp parallel for reduction(+: ind_amp) private(frame)
     for (Mat frame : filtered_stack) {
         Mat frame_result;
         multiply(frame, color_amp, frame_result);
-        /*for (int x = 0; x < frame.rows; x++) {
-            for (int y = 0; y < frame.cols; y++) {
-                Vec3d this_pixel = frame.at<Vec3d>(x, y);
-                this_pixel[0] = this_pixel[0] * alpha;
-                this_pixel[1] = this_pixel[1] * alpha * chromAttenuation;
-                this_pixel[2] = this_pixel[2] * alpha * chromAttenuation;
-                frame.at<Vec3d>(x, y) = this_pixel;
-            }
-        }*/
         filtered_stack[ind_amp] = frame_result;
         ind_amp++;
     }
+
+
+    //}
     // Get ending timepoint
     stop = high_resolution_clock::now();
     // Get duration. Substart timepoints to get durarion.
@@ -180,21 +177,6 @@ int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double al
 
         threshold(frame, out_frame, 0.0f, 0.0f, THRESH_TOZERO);
         threshold(out_frame, frame, 1.0f, 1.0f, THRESH_TRUNC);
-
-        //for (int x = 0; x < frame.rows; x++) {
-        //    for (int y = 0; y < frame.cols; y++) {
-        //        Vec3d this_pixel = frame.at<Vec3d>(x, y);
-        //        for (int z = 0; z < 3; z++) {
-        //            if (this_pixel[z] > 1) {
-        //                this_pixel[z] = 1;
-        //            }
-        //            if (this_pixel[z] < 0) {
-        //                this_pixel[z] = 0;
-        //            }
-        //        }
-        //        frame.at<Vec3d>(x, y) = this_pixel;
-        //    }
-        //}
 
         rgbframe = im2uint8(frame);
 
@@ -253,7 +235,7 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
     Vec2d high_a(aa[0], aa[1]); 
     //cout << pp[0] << " " << pp[1] << " " << aa[0] << " " << aa[1] << endl;
 
-    butter_coeff(1, 1, samplingRate * 2, fh);
+    butter_coeff(1, 1, samplingRate*2, fh);
     Vec2d low_b(pp[0], pp[1]);
     Vec2d high_b(aa[0], aa[1]);
     //cout << pp[0] << " " << pp[1] << " " << aa[0] << " " << aa[1] << endl;
@@ -441,13 +423,6 @@ vector<Mat> build_GDown_stack(string vidFile, int startIndex, int endIndex, int 
 
         buildPyramid(ntscframe, pyr_output, level+1, BORDER_REFLECT101);
 
-        //Mat bgrframe;
-        //cvtColor(pyr_output[0], bgrframe, COLOR_RGB2BGR);
-        //imshow("1", pyr_output[level]);
-        //imshow("2", pyr_output[6]);
-        //imshow("original", bgrframe);
-        //waitKey(0);
-
         GDown_stack.push_back(pyr_output[level].clone());
     }
 
@@ -554,7 +529,6 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
     // Here we populate the forementioned matrix
     for (int x = 0; x < input[0].rows; x++) {
         for (int y = 0; y < input[0].cols; y++) {
-            
             for (int i = 0; i < n; i++) {
                 Vec3d pix_colors = input[i].at<Vec3d>(x, y);
                 temp_dft.at<double>(pos_temp, i) = pix_colors[0];
@@ -594,7 +568,10 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
     //cout << "----------End of tests----------" << endl;
 
     // Filtering the video matrix with a mask
+
+    #pragma omp parallel for
     for (int i = 0; i < total_rows; i++) {
+        #pragma omp parallel for
         for (int j = 0; j < n; j++) {
             if (!mask.at<bool>(j, 0)) {
                 Vec2d temp_zero_vector(0.0f, 0.0f);

@@ -1,6 +1,8 @@
 #include <iostream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/utils/filesystem.hpp>
+// cpp_compiler_options_openmp.cpp
+//#include <omp.h>
 
 #include "processing_functions.h"
 
@@ -28,6 +30,11 @@ int main() {
 
     //amplify_spatial_lpyr_temporal_butter(dataDir + "baby.mp4", resultsDir,
     //    30, 16, 0.4f, 3.0f, 30, 0.1f);
+
+    //#pragma omp parallel for
+    //for (int i = 1; i < 2; i++) {
+    //    cout << i << endl;
+    //}
 
     return 0;
 }
