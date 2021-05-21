@@ -1,6 +1,7 @@
 #include <omp.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
+#include <opencv2/core/matx.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/imgproc.hpp>
@@ -9,6 +10,7 @@
 #include <sstream>
 #include <vector>
 #include <numeric>
+#include <omp.h>
 
 #include "processing_functions.h"
 #include "im_conv.h"
@@ -477,7 +479,7 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
     // Printing the cut frequencies
     cout << "F1: " + to_string(wl) + " F2: " + to_string(wh) << endl;
 
-    vector<Mat> filtered;
+    int n = input.size();
 
     // Number of frames in the video
     // Represents time
@@ -535,6 +537,8 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
                 temp_dft.at<double>(pos_temp+1, i) = pix_colors[1];
                 temp_dft.at<double>(pos_temp+2, i) = pix_colors[2];
             }
+        }
+    }
 
             pos_temp += 3;
             
@@ -611,11 +615,48 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
                 pix_colors[2] = input_idft.at<Vec2d>(pos_temp + 2, i)[0];
                 temp_filtframe.at<Vec3d>(x, y) = pix_colors;
 
-                pos_temp += 3;
+        filtered = filtered + ntscframe;
+        imshow("Filtered", filtered);
+
+        frame = ntsc2rgb(filtered);
+        imshow("Frame", frame);
+
+        for (int x = 0; x < frame.rows; x++) {
+            for (int y = 0; y < frame.cols; y++) {
+                Vec3d this_pixel = frame.at<Vec3d>(x, y);
+                for (int z = 0; z < 3; z++) {
+                    if (this_pixel[z] > 1) {
+                        this_pixel[z] = 1;
+                    }
+
+                    if (this_pixel[z] < 0) {
+                        this_pixel[z] = 0;
+                    }
+                }
+
+                frame.at<Vec3d>(x, y) = this_pixel;
             }
         }
 
-        filtered.push_back(temp_filtframe.clone());
+        rgbframe = im2uint8(frame);
+        imshow("Rgb frame", rgbframe);
+
+        cvtColor(rgbframe, out_frame, COLOR_RGB2BGR);
+        imshow("Out frame", out_frame);
+
+
+        // Write the frame into the file 'outcpp.avi'
+        videoOut.write(out_frame);
+
+        k++;
+
+        // Display the resulting frame
+        
+        
+        //Press  ESC on keyboard to exit
+        //char c = (char)waitKey(25);
+        //if (c == 27)
+            //break;
     }
 
     return filtered;
