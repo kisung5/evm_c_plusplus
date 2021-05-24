@@ -296,7 +296,6 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
     VideoWriter videoOut(outName, VideoWriter::fourcc('M', 'J', 'P', 'G'), fr,
         Size(vidWidth, vidHeight));
 
-
     // First frame
     Mat frame, rgbframe, ntscframe;
     vector<Mat> pyr_output;
@@ -311,54 +310,58 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
     // Compute maximum pyramid height for every frame
     int max_ht = 1 + maxPyrHt(vidWidth, vidHeight, MAX_FILTER_SIZE, MAX_FILTER_SIZE);
 
+    vector<Mat> pyr = buildLpyr(ntscframe, max_ht);
+
+
+
     // Render on the input video to make the output video
-    cout << "Rendering... ";
-    int k = 0;
-    // Get starting timepoint
-    for (int i = startIndex + 1; i < endIndex; i++) {
+    //cout << "Rendering... ";
+    //int k = 0;
+    //// Get starting timepoint
+    //for (int i = startIndex + 1; i < endIndex; i++) {
 
-        Mat filt_ind, filtered, out_frame;
-        // Capture frame-by-frame
-        video >> frame;
+    //    Mat filt_ind, filtered, out_frame;
+    //    // Capture frame-by-frame
+    //    video >> frame;
 
-        // Color conversion GBR 2 NTSC
-        cvtColor(frame, rgbframe, COLOR_BGR2RGB);
-        rgbframe = im2double(rgbframe);
-        ntscframe = rgb2ntsc(rgbframe);
+    //    // Color conversion GBR 2 NTSC
+    //    cvtColor(frame, rgbframe, COLOR_BGR2RGB);
+    //    rgbframe = im2double(rgbframe);
+    //    ntscframe = rgb2ntsc(rgbframe);
 
-        //filt_ind = filtered_stack[k];
+    //    //filt_ind = filtered_stack[k];
 
-        Size img_size(vidWidth, vidHeight);//the dst image size,e.g.100x100
-        resize(filt_ind, filtered, img_size, 0, 0, INTER_CUBIC);//resize image
+    //    Size img_size(vidWidth, vidHeight);//the dst image size,e.g.100x100
+    //    resize(filt_ind, filtered, img_size, 0, 0, INTER_CUBIC);//resize image
 
-        filtered = filtered + ntscframe;
+    //    filtered = filtered + ntscframe;
 
-        frame = ntsc2rgb(filtered);
+    //    frame = ntsc2rgb(filtered);
 
-        for (int x = 0; x < frame.rows; x++) {
-            for (int y = 0; y < frame.cols; y++) {
-                Vec3d this_pixel = frame.at<Vec3d>(x, y);
-                for (int z = 0; z < 3; z++) {
-                    if (this_pixel[z] > 1) {
-                        this_pixel[z] = 1;
-                    }
-                    if (this_pixel[z] < 0) {
-                        this_pixel[z] = 0;
-                    }
-                }
-                frame.at<Vec3d>(x, y) = this_pixel;
-            }
-        }
+    //    for (int x = 0; x < frame.rows; x++) {
+    //        for (int y = 0; y < frame.cols; y++) {
+    //            Vec3d this_pixel = frame.at<Vec3d>(x, y);
+    //            for (int z = 0; z < 3; z++) {
+    //                if (this_pixel[z] > 1) {
+    //                    this_pixel[z] = 1;
+    //                }
+    //                if (this_pixel[z] < 0) {
+    //                    this_pixel[z] = 0;
+    //                }
+    //            }
+    //            frame.at<Vec3d>(x, y) = this_pixel;
+    //        }
+    //    }
 
-        rgbframe = im2uint8(frame);
+    //    rgbframe = im2uint8(frame);
 
-        cvtColor(rgbframe, out_frame, COLOR_RGB2BGR);
+    //    cvtColor(rgbframe, out_frame, COLOR_RGB2BGR);
 
-        // Write the frame into the file 'outcpp.avi'
-        videoOut.write(out_frame);
+    //    // Write the frame into the file 'outcpp.avi'
+    //    videoOut.write(out_frame);
 
-        k++;
-    }
+    //    k++;
+    //}
 
     // When everything done, release the video capture and write object
     video.release();
@@ -636,7 +639,6 @@ vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, 
 }
 
 
-
 int maxPyrHt(int frameWidth, int frameHeight, int filterSizeX, int filterSizeY) {
     // 1D image
     if (frameWidth == 1 || frameHeight == 1) {
@@ -854,8 +856,21 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
     int lambda_c, double fl, double fh, int samplingRate, int chromAttenuation) {
 
     double itime, spatial_time, temporal_time;
+
+    string name;
+    string delimiter = "/";
+
+    size_t last = 0; size_t next = 0;
+    while ((next = inFile.find(delimiter, last)) != string::npos) {
+        last = next + 1;
+    }
+
+    name = inFile.substr(last);
+    name = name.substr(0, name.find("."));
+    cout << name << endl;
+
     // Creates the result video name
-    string outName = "guitar-ideal-from-" + to_string(fl) + "-to-" +
+    string outName = outDir + name + "-ideal-from-" + to_string(fl) + "-to-" +
         to_string(fh) + "-alpha-" + to_string(alpha) + "-lambda_c-" + to_string(lambda_c) +
         "-chromAtn-" + to_string(chromAttenuation) + ".avi";
 
@@ -931,26 +946,26 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
         // Capture frame-by-frame
         video >> frame;
 
-        imshow("Original", frame);
+        //imshow("Original", frame);
 
         // Color conversion GBR 2 NTSC
         cvtColor(frame, rgbframe, COLOR_BGR2RGB);
         rgbframe = im2double(rgbframe);
         ntscframe = rgb2ntsc(rgbframe);
 
-        imshow("Converted", ntscframe);
+        //imshow("Converted", ntscframe);
 
         filt_ind = filteredStack[k][0];
-        imshow("Filtered stack", filt_ind);
+        //imshow("Filtered stack", filt_ind);
 
         Size img_size(vidWidth, vidHeight);//the dst image size,e.g.100x100
         resize(filt_ind, filtered, img_size, 0, 0, INTER_CUBIC);//resize image
 
         filtered = filtered + ntscframe;
-        imshow("Filtered", filtered);
+        //imshow("Filtered", filtered);
 
         frame = ntsc2rgb(filtered);
-        imshow("Frame", frame);
+        //imshow("Frame", frame);
 
         for (int x = 0; x < frame.rows; x++) {
             for (int y = 0; y < frame.cols; y++) {
@@ -970,10 +985,10 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
         }
 
         rgbframe = im2uint8(frame);
-        imshow("Rgb frame", rgbframe);
+        //imshow("Rgb frame", rgbframe);
 
         cvtColor(rgbframe, out_frame, COLOR_RGB2BGR);
-        imshow("Out frame", out_frame);
+        //imshow("Out frame", out_frame);
 
 
         // Write the frame into the file 'outcpp.avi'
