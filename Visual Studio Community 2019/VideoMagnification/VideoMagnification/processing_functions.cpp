@@ -39,6 +39,10 @@ constexpr auto PYR_BORDER_TYPE = 2;
 using namespace cv;
 using namespace std;
 
+double FILTER_DATA[] = { 0.088388347648318, 0.353553390593274, 0.530330085889911, 0.353553390593274, 0.088388347648318 };
+Mat FILTER(5, 1, CV_64FC1, FILTER_DATA);
+Mat T_FILTER(1, 5, CV_64FC1, FILTER_DATA);
+
 int maxPyrHt(int frameWidth, int frameHeight, int filterSizeX, int filterSizeY) {
     // 1D image
     if (frameWidth == 1 || frameHeight == 1) {
@@ -61,10 +65,23 @@ int maxPyrHt(int frameWidth, int frameHeight, int filterSizeX, int filterSizeY) 
     }
 }
 
+Mat corrDn(Mat image, Mat filter, int heightStep, int widthStep) {
+    resize(image, image, Size(image.cols / widthStep, image.rows / heightStep), 0, 0, INTER_NEAREST);
+    //filter2D(image, image, -1, filter, Point(-1, -1), 0, BORDER_REFLECT101);
+    return image;
+}
+
+Mat upConv(Mat image, Mat filter, int widthStep, int heightStep) {
+    //filter2D(image, image, -1, filter, Point(-1, -1), 0, BORDER_REFLECT101);
+    resize(image, image, Size(image.cols * widthStep, image.rows * heightStep), 0, 0, INTER_NEAREST);
+    return image;
+}
 
 vector<Mat> buildLpyr(Mat image, int levels) {
     vector<Mat> laplacianPyramid(levels);
-    Mat up, down, lap;
+
+    Mat lap, down, up;
+
     for (int l = 0; l < levels - 1; l++) {
         pyrDown(image, down, Size(image.cols / 2, image.rows / 2), BORDER_REFLECT101);
         pyrUp(down, up, Size(image.cols, image.rows), BORDER_REFLECT101);
@@ -74,6 +91,85 @@ vector<Mat> buildLpyr(Mat image, int levels) {
     }
     int maxLevelIndex = levels - 1;
     laplacianPyramid[maxLevelIndex] = image.clone();
+
+    return laplacianPyramid;
+}
+
+Mat buildLpyr2(Mat image, int levels) {
+    if (levels <= 1) {
+        image.reshape(0, (int)image.total());
+        return image;
+    }
+    else {
+        Mat lo, lo2, hi, hi2, npyr, pyr;
+        if (image.cols == 1) {
+            lo2 = corrDn(image, FILTER, 2, 1);
+            hi2 = upConv(lo2, FILTER, 2, 1);
+        }
+        else if (image.rows == 1) {
+            lo2 = corrDn(image, T_FILTER, 1, 2);
+            hi2 = upConv(lo2, T_FILTER, 1, 2);
+        }
+        else {
+            lo = corrDn(image, T_FILTER, 1, 2);
+            lo2 = corrDn(lo, FILTER, 2, 1);
+            hi = upConv(lo2, FILTER, 2, 1);
+            hi2 = upConv(hi, T_FILTER, 1, 2);
+        }
+
+        npyr = buildLpyr2(lo2, levels - 1);
+
+        int maxWidth = cv::max(hi2.cols, image.cols);
+        int maxHeight = cv::max(hi2.rows, image.rows);
+        resize(image, image, Size(maxWidth, maxHeight));
+        resize(hi2, hi2, Size(maxWidth, maxHeight));
+        hi2 = image - hi2;
+
+        hi2 = hi2.reshape(0, (int)hi2.total());
+        npyr = npyr.reshape(0, (int)npyr.total());
+        vconcat(hi2, npyr, pyr);
+
+        return pyr.clone();
+    }
+}
+
+Mat buildLpyr3(Mat image, int levels) {
+    Mat lap, down, up, reshaped;
+    pyrDown(image, down, Size((image.cols + 1) / 2, (image.rows + 1) / 2), BORDER_REFLECT101);
+    pyrUp(down, up, Size(image.cols, image.rows), BORDER_REFLECT101);
+    image = image - up;
+    lap = image.reshape(0, (int)image.total());
+    image = down.clone();
+
+    for (int l = 1; l < levels - 1; l++) {
+        pyrDown(image, down, Size((image.cols + 1) / 2, (image.rows + 1) / 2), BORDER_REFLECT101);
+        pyrUp(down, up, Size(image.cols, image.rows), BORDER_REFLECT101);
+        image = image - up;
+        image = image.reshape(0, (int)image.total());
+        vconcat(lap, image, lap);
+        image = down.clone();
+    }
+
+    image = image.reshape(0, (int)image.total());
+    vconcat(lap, image, lap);
+
+    return lap;
+}
+
+vector<Mat> buildLpyr4(Mat image, int levels) {
+    vector<Mat> gaussianPyramid(levels);
+    vector<Mat> expandedPyramid(levels - 1);
+    vector<Mat> laplacianPyramid(levels);
+
+    gaussianPyramid[0] = image.clone();
+
+    for (int l = 0; l < levels - 1; l++) {
+        pyrDown(gaussianPyramid[l], gaussianPyramid[l + 1], Size((gaussianPyramid[l].cols + 1) / 2, (gaussianPyramid[l].rows + 1) / 2), BORDER_REFLECT101);
+        pyrUp(gaussianPyramid[l + 1], expandedPyramid[l], Size(gaussianPyramid[l].cols, gaussianPyramid[l].rows), BORDER_REFLECT101);
+        laplacianPyramid[l] = gaussianPyramid[l] - expandedPyramid[l];
+    }
+    laplacianPyramid[levels - 1] = gaussianPyramid[levels - 1];
+
     return laplacianPyramid;
 }
 
@@ -91,6 +187,7 @@ vector<vector<Mat>> build_Lpyr_stack(string vidFile, int startIndex, int endInde
     int max_ht = 1 + maxPyrHt(vidWidth, vidHeight, MAX_FILTER_SIZE, MAX_FILTER_SIZE);
 
     vector<vector<Mat>> pyr_stack(endIndex, vector<Mat>(max_ht));
+    vector<Mat> pyr_stack3(endIndex);
 
     double start, end;
     for (int i = startIndex; i < endIndex; i++) {
@@ -108,7 +205,31 @@ vector<vector<Mat>> build_Lpyr_stack(string vidFile, int startIndex, int endInde
         cvtColor(frame, rgbframe, COLOR_BGR2RGB);
         rgbframe = im2double(rgbframe);
         ntscframe = rgb2ntsc(rgbframe);
-        vector<Mat> pyr_output = buildLpyr(ntscframe, max_ht);
+        //start = omp_get_wtime();
+        vector<Mat> pyr_output = buildLpyr4(ntscframe, max_ht);
+        //pyr_stack3[i] = buildLpyr3(ntscframe, max_ht);
+        //end = omp_get_wtime();
+        //cout << "Build Lpyr for frame " << i << ". Elapsed time = " << end - start << endl;
+        //cout << pyr_output[0].at<Vec3d>(0, 0) << endl;
+        //cout << pyr_output[0].at<Vec3d>(1, 0) << endl;
+        //cout << pyr_output[0].at<Vec3d>(69, 0) << endl;
+        //cout << pyr_output[0].at<Vec3d>(70, 0) << endl;
+        //cout << pyr_output[0].at<Vec3d>(71, 0) << endl;
+        //cout << pyr_output[0].at<Vec3d>(79, 0) << endl;
+        //cout << pyr_output[0].at<Vec3d>(80, 0) << endl;
+        //start = omp_get_wtime();
+        //Mat pyr_output2 = buildLpyr2(ntscframe, max_ht);
+        //end = omp_get_wtime();
+        //cout << "Build Lpyr2 for frame " << i << ". Elapsed time = " << end - start << endl;
+        // Testing the values in pyr_output2 
+        //cout << pyr_output2.at<Vec3d>(0, 0) << endl;
+        //cout << pyr_output2.at<Vec3d>(1, 0) << endl;
+        //cout << pyr_output2.at<Vec3d>(69, 0) << endl;
+        //cout << pyr_output2.at<Vec3d>(70, 0) << endl;
+        //cout << pyr_output2.at<Vec3d>(71, 0) << endl;
+        //cout << pyr_output2.at<Vec3d>(79, 0) << endl;
+        //cout << pyr_output2.at<Vec3d>(80, 0) << endl;
+        //cout << "" << endl;
         pyr_stack[i] = pyr_output;
         //end = omp_get_wtime();
         //cout << "Iteration " << i << " time = " << end - start << endl;
@@ -203,11 +324,13 @@ vector<vector<Mat>> ideal_bandpassing_lpyr(vector<vector<Mat>> input, int dim, d
     cout << "9: " << tmp.at<double>(0, 9) << endl;
     cout << "10: " << tmp.at<double>(0, 10) << endl;
     */
+    
+
     dft(tmp, tmp, DFT_ROWS | DFT_COMPLEX_OUTPUT);
 
     // Filtering the video matrix with a mask
-    // 15.4 s
-    // #pragma omp parallel for collapse(2)
+
+    #pragma omp parallel for collapse(2)
     for (int i = 0; i < total_pixels; i++) {
         for (int j = 0; j < n; j++) {
             if (!mask.at<bool>(j, 0)) {
@@ -252,7 +375,7 @@ vector<vector<Mat>> ideal_bandpassing_lpyr(vector<vector<Mat>> input, int dim, d
 int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
     int lambda_c, double fl, double fh, int samplingRate, int chromAttenuation) {
 
-    double itime, spatial_time, temporal_time;
+    double itime, spatial_time, temporal_time, etime;
     // Creates the result video name
     string outName = "guitar-ideal-from-" + to_string(fl) + "-to-" +
         to_string(fh) + "-alpha-" + to_string(alpha) + "-lambda_c-" + to_string(lambda_c) +
@@ -291,38 +414,39 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
 
     vector<vector<Mat>> filteredStack = ideal_bandpassing_lpyr(pyr_stack, 3, fl, fh, samplingRate);
 
-    temporal_time = omp_get_wtime();
-
-    std::cout << "Temporal filtering: " << temporal_time - spatial_time << endl;
-
+    /*
     cout << filteredStack[0][0].at<Vec3d>(0, 0) << endl;
     cout << filteredStack[0][0].at<Vec3d>(0, 1) << endl;
     cout << filteredStack[0][0].at<Vec3d>(1, 0) << endl;
     cout << filteredStack[1][0].at<Vec3d>(0, 0) << endl;
     cout << filteredStack[1][0].at<Vec3d>(0, 1) << endl;
-
+    */
 
     // Amplify color channels in NTSC
-    for (vector<Mat> frame : filteredStack) {
-        for (Mat levelFrame : frame) {
-            for (int x = 0; x < levelFrame.rows; x++) {
-                for (int y = 0; y < levelFrame.cols; y++) {
-                    Vec3d this_pixel = levelFrame.at<Vec3d>(x, y);
+    #pragma omp parallel for collapse(4)
+    for (int frame = 0; frame < filteredStack.size(); frame++) {
+        for (int levelFrame = 0; levelFrame < filteredStack[frame].size(); levelFrame++) {
+            for (int x = 0; x < filteredStack[frame][levelFrame].rows; x++) {
+                for (int y = 0; y < filteredStack[frame][levelFrame].cols; y++) {
+                    Vec3d this_pixel = filteredStack[frame][levelFrame].at<Vec3d>(x, y);
                     this_pixel[0] = this_pixel[0] * alpha;
                     this_pixel[1] = this_pixel[1] * alpha * chromAttenuation;
                     this_pixel[2] = this_pixel[2] * alpha * chromAttenuation;
-                    levelFrame.at<Vec3d>(x, y) = this_pixel;
+                    filteredStack[frame][levelFrame].at<Vec3d>(x, y) = this_pixel;
                 }
             }
         }
     }
+
+    temporal_time = omp_get_wtime();
+
+    std::cout << "Temporal filtering: " << temporal_time - spatial_time << endl;
 
     // Render on the input video to make the output video
     // Define the codec and create VideoWriter object
     VideoWriter videoOut(outName, VideoWriter::fourcc('M', 'J', 'P', 'G'), fr,
         Size(vidWidth, vidHeight));
 
-    cout << "Rendering... ";
     int k = 0;
     for (int i = startIndex; i < endIndex; i++) {
 
@@ -330,27 +454,21 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
         // Capture frame-by-frame
         video >> frame;
 
-        imshow("Original", frame);
-
         // Color conversion GBR 2 NTSC
         cvtColor(frame, rgbframe, COLOR_BGR2RGB);
         rgbframe = im2double(rgbframe);
         ntscframe = rgb2ntsc(rgbframe);
 
-        imshow("Converted", ntscframe);
-
         filt_ind = filteredStack[k][0];
-        imshow("Filtered stack", filt_ind);
 
         Size img_size(vidWidth, vidHeight);//the dst image size,e.g.100x100
         resize(filt_ind, filtered, img_size, 0, 0, INTER_CUBIC);//resize image
 
         filtered = filtered + ntscframe;
-        imshow("Filtered", filtered);
 
         frame = ntsc2rgb(filtered);
-        imshow("Frame", frame);
 
+        #pragma omp parallel for collapse(3)
         for (int x = 0; x < frame.rows; x++) {
             for (int y = 0; y < frame.cols; y++) {
                 Vec3d this_pixel = frame.at<Vec3d>(x, y);
@@ -369,11 +487,8 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
         }
 
         rgbframe = im2uint8(frame);
-        imshow("Rgb frame", rgbframe);
 
         cvtColor(rgbframe, out_frame, COLOR_RGB2BGR);
-        imshow("Out frame", out_frame);
-
 
         // Write the frame into the file 'outcpp.avi'
         videoOut.write(out_frame);
@@ -388,6 +503,10 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
         //if (c == 27)
             //break;
     }
+
+    etime = omp_get_wtime();
+
+    std::cout << "Render: " << etime - temporal_time << endl;
 
     // When everything done, release the video capture and write object
     video.release();
