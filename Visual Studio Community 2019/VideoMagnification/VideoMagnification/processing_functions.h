@@ -13,7 +13,7 @@ Video processing functions
 int amplify_spatial_Gdown_temporal_ideal(string inFile, string outDir, double alpha, int level, 
 	double f1, double fh, int samplingRate, double chromAttenuation);
 
-int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double alpha, int lambda_c,
+int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double alpha, double lambda_c,
 	double fl, double fh, int samplingRate, double chromAttenuation);
 
 int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha, int lambda_c, 
@@ -40,6 +40,8 @@ Mat corrDn(Mat image, Mat filter, int heightStep, int widthStep);
 vector<vector<Mat>> build_Lpyr_stack(string vidFile, int startIndex, int endIndex);
 
 int maxPyrHt(int frameWidth, int frameHeight, int filterSizeX, int filterSizeY);
+
+Mat reconLpyr(vector<Mat> pyr);
 
 /*
 Temporal filter functions
