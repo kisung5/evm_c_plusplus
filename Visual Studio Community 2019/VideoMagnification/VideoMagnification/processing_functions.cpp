@@ -318,7 +318,7 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
     int max_ht = 1 + maxPyrHt(vidWidth, vidHeight, MAX_FILTER_SIZE, MAX_FILTER_SIZE);
 
     // Compute the Laplace pyramid
-    vector<Mat> pyr = buildLpyr(ntscframe1, max_ht);
+    vector<Mat> pyr = buildLpyr4(ntscframe1, max_ht);
 
     cout << pyr.size() << endl;
 
@@ -337,11 +337,6 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
     int nLevels = (int)pyr.size();
     Scalar color_amp(1.0f, chromAttenuation, chromAttenuation);
 
-    // The factor to boost alpha above the bound we have in the paper. (for better visualization)
-    double exaggeration_factor = 2.0f;
-
-    double delta = lambda_c / 8 / (1 + alpha);
-
     for (int i = startIndex + 1; i < endIndex; i++) {
 
         Mat frame, rgbframe, ntscframe, out_frame;
@@ -355,7 +350,7 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
         ntscframe = rgb2ntsc(rgbframe);
 
         // Compute the Laplace pyramid
-        pyr = buildLpyr(ntscframe, max_ht); // Has information in the upper levels
+        pyr = buildLpyr4(ntscframe, max_ht); // Has information in the upper levels
 
         //for (int l_test = nLevels-1; l_test < nLevels; l_test++) {
         //    for (int i_test = 0; i_test < pyr[l_test].rows; i_test++) {
@@ -446,13 +441,18 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
         // Compute the representative wavelength lambda for the lowest spatial frecuency
         //  band of Laplacian pyramid
 
+            // The factor to boost alpha above the bound we have in the paper. (for better visualization)
+        double exaggeration_factor = 2.0f;
+
+        double delta = lambda_c / 8.0f / (1.0f + alpha);
+
         double lambda = pow(pow(vidHeight, 2.0f) + pow(vidWidth, 2.0f), 0.5f) / 3.0f; // is experimental constant
 
         for (int l = nLevels - 1; l >= 0; l--) {
             // go one level down on pyramid each stage
 
             // Compute modified alpha for this level
-            double currAlpha = lambda / delta / 8 - 1;
+            double currAlpha = lambda / delta / 8.0f - 1.0f;
             currAlpha = currAlpha * exaggeration_factor;
 
             //cout << currAlpha << endl;
@@ -471,7 +471,7 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
                 //filtered[l] = filtered[l] * currAlpha;
             }
 
-            lambda = lambda / 2;
+            lambda = lambda / 2.0f;
         }
 
         // Render on the input video
@@ -500,7 +500,7 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
         videoOut.write(out_frame);
 
         cout << i << endl;
-        //break;
+        break;
     }
 
     // When everything done, release the video capture and write object
@@ -983,23 +983,22 @@ Mat reconLpyr(vector<Mat> lpyr) {
     int levels = (int)lpyr.size();
 
     Size res_sz(lpyr[levels-1].cols, lpyr[levels-1].rows);
+    //Size res_sz(lpyr[0].cols, lpyr[0].rows);
     Mat res = Mat::zeros(res_sz, CV_64FC3);
+    //Mat res = lpyr[1];
     res = lpyr[levels - 1] + res;
+
+    //Mat nres, sum;
+    //pyrUp(res, nres, res_sz, BORDER_REFLECT101);
+    //sum = nres + lpyr[0];
+
 
     for (int l = levels - 2; l >= 0; l--) {
         Mat nres;
-        res_sz = Size(lpyr[l].cols, lpyr[l].rows);
-        pyrUp(res, nres, res_sz, BORDER_REFLECT101);
+        Size res_sz1 = Size(lpyr[l].cols, lpyr[l].rows);
+        pyrUp(res, nres, res_sz1, BORDER_REFLECT101);
 
         res = nres + lpyr[l];
-
-        //for (int i_test = 0; i_test < 10; i_test++) {
-        //    cout << lpyr[l].at<Vec3d>(i_test, 0) << endl;
-        //}
-
-        //for (int i_test = 0; i_test < 10; i_test++) {
-        //    cout << res.at<Vec3d>(i_test, 0) << endl;
-        //}
     }
 
     return res;

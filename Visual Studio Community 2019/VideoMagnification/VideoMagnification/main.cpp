@@ -23,11 +23,11 @@ int main() {
     //amplify_spatial_Gdown_temporal_ideal(dataDir + "face.mp4", resultsDir, 
     //    50, 4, 50.0f / 60.0f, 60.0f / 60.0f, 30, 1);
 
-    //amplify_spatial_Gdown_temporal_ideal(dataDir + "face2.mp4", resultsDir, 
-    //    50, 6, 50.0f / 60.0f, 60.0f / 60.0f, 30, 1);
+    amplify_spatial_Gdown_temporal_ideal(dataDir + "face2.mp4", resultsDir, 
+        50, 6, 50.0f / 60.0f, 60.0f / 60.0f, 30, 1);
 
-    amplify_spatial_lpyr_temporal_butter(dataDir + "baby.mp4", resultsDir,
-        30.0f, 16.0f, 0.4f, 3.0f, 30, 0.1f);
+    //amplify_spatial_lpyr_temporal_butter(dataDir + "baby.mp4", resultsDir,
+    //    30.0f, 16.0f, 0.4f, 3.0f, 30, 0.1f);
 
     //amplify_spatial_lpyr_temporal_ideal(dataDir + "guitar.mp4", resultsDir,
     //    50, 10, 72.0f, 92.0f, 600, 0);
