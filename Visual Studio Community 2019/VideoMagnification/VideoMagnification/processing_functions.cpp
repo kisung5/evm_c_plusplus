@@ -238,75 +238,89 @@ vector<vector<Mat>> build_Lpyr_stack(string vidFile, int startIndex, int endInde
     return pyr_stack;
 }
 
-vector<vector<Mat>> ideal_bandpassing_lpyr(vector<vector<Mat>> input, int dim, double wl, double wh, int samplingRate) {
-    // Get channel count
-    int channels = input[0][0].channels();
-
-    // Comprobation of the dimentions
-    if (dim > 1 + channels) {
+vector<vector<Mat>> ideal_bandpassing_lpyr(vector<vector<Mat>>& input, int dim, double wl, double wh, int samplingRate) {
+    /*
+    Comprobation of the dimention
+    It is so 'dim' doesn't excede the actual dimension of the input
+    In Matlab you can shift the dimentions of a matrix, for example, 3x4x3 can be shifted to 4x3x3
+    with the same values stored in the correspondant dimension.
+    Here (C++) it is not applied any shifting, yet.
+    */
+    if (dim > 1 + input[0][0].channels()) {
         std::cout << "Exceed maximun dimension" << endl;
         exit(1);
     }
 
     vector<vector<Mat>> filtered = input;
 
+    // Number of frames in the video
+    // Represents time
     int n = input.size();
 
+    // Temporal vector that's constructed for the mask
+    // iota is used to fill the vector with a integer sequence 
+    // [0, 1, 2, ..., n]
     vector<int> Freq_temp(n);
     iota(begin(Freq_temp), end(Freq_temp), 0); //0 is the starting number
 
+    // Initialize the cv::Mat with the temp vector and without copying values
     Mat Freq(Freq_temp, false);
     double alpha = (double)samplingRate / (double)n;
     Freq.convertTo(Freq, CV_64FC1, alpha);
 
-    // Testing the values in Freq [OK]
-    //cout << Freq.at<double>(0, 0) << endl;
-    //cout << Freq.at<double>(1, 0) << endl;
-    //cout << Freq.at<double>(69, 0) << endl;
-    //cout << Freq.at<double>(70, 0) << endl;
-    //cout << Freq.at<double>(71, 0) << endl;
-    //cout << Freq.at<double>(79, 0) << endl;
-    //cout << Freq.at<double>(80, 0) << endl;
+    Mat mask = (Freq > wl) & (Freq < wh); // creates a boolean matrix/mask
 
-    Mat mask = (Freq > wl) & (Freq < wh);
-
-    // Testing the values in the mask [OK]
-    //cout << mask.at<bool>(0, 0) << endl;
-    //cout << mask.at<bool>(1, 0) << endl;
-    //cout << mask.at<bool>(69, 0) << endl;
-    //cout << mask.at<bool>(70, 0) << endl;
-    //cout << mask.at<bool>(71, 0) << endl;
-    //cout << mask.at<bool>(79, 0) << endl;
-    //cout << mask.at<bool>(80, 0) << endl;
-
+    // Sum of total pixels to be processed
     int total_pixels = 0;
     int levels = input[0].size();
-
     #pragma omp parallel for
     for (int level = 0; level < levels; level++) {
-        total_pixels += input[0][level].cols * input[0][level].rows * channels;
+        total_pixels += input[0][level].cols * input[0][level].rows * input[0][0].channels();
     }
 
-    int pos_temp = 0;
+    /*
+    Temporal matrix that is constructed so the DFT method (Discrete Fourier Transform)
+    that OpenCV provides can be used. The most common use for the DFT in image
+    processing is the 2-D DFT, in this case we want 1-D DFT for every pixel time vector.
+    Every row of the matrix is the timeline of an specific pixel.
+    The structure of temp_dft is:
+    [
+         [pixel_0000, pixel_1000, pixel_2000, ..., pixel_n000],
+         [pixel_0001, pixel_1001, pixel_2001, ..., pixel_n001],
+         [pixel_0002, pixel_1002, pixel_2002, ..., pixel_n002],
+         [pixel_0010, pixel_1010, pixel_2010, ..., pixel_n010],
+         .
+         .
+         .
+         [pixel_0xy0, pixel_1xy0, pixel_2xy0, ..., pixel_nxy0],
+         .
+         .
+         .
+         [pixel_0xy3, pixel_1xy3, pixel_2xy3, ..., pixel_nxy0],
+    ]
+
+    If you didn't get it: pixel_time-row/x-col/y-colorchannel
+    */
     Mat tmp(total_pixels, n, CV_64FC1);
 
     // 0.155 s elapsed since start
  
     // Here we populate the forementioned matrix
     // 14.99 s
-    // #pragma omp parallel for collapse(2)
+    #pragma omp parallel for
     for (int level = 0; level < levels; level++) {
+        #pragma omp parallel for
         for (int x = 0; x < input[0][level].rows; x++) {
-            // #pragma omp parallel for reduction(+:pos_temp)
+            #pragma omp parallel for
             for (int y = 0; y < input[0][level].cols; y++) {
-                // #pragma omp parallel for
+                #pragma omp parallel for shared(input, tmp)
                 for (int i = 0; i < n; i++) {
+                    int pos_temp = 3 * (y + x * input[0][level].cols);
                     Vec3d pix_colors = input[i][level].at<Vec3d>(x, y);
                     tmp.at<double>(pos_temp, i) = pix_colors[0];
                     tmp.at<double>(pos_temp + 1, i) = pix_colors[1];
                     tmp.at<double>(pos_temp + 2, i) = pix_colors[2];
                 }
-                pos_temp += 3;
             }
         }
     }
@@ -330,8 +344,9 @@ vector<vector<Mat>> ideal_bandpassing_lpyr(vector<vector<Mat>> input, int dim, d
 
     // Filtering the video matrix with a mask
 
-    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for
     for (int i = 0; i < total_pixels; i++) {
+        #pragma omp parallel for shared(tmp)
         for (int j = 0; j < n; j++) {
             if (!mask.at<bool>(j, 0)) {
                 Vec2d temp_zero_vector(0.0f, 0.0f);
@@ -346,22 +361,23 @@ vector<vector<Mat>> ideal_bandpassing_lpyr(vector<vector<Mat>> input, int dim, d
 
      // Reording the matrix to a vector of matrixes, 
     // contrary of what was done for temp_dft
-    //#pragma omp parallel for collapse(2)
+    #pragma omp parallel for shared(input)
     for (int i = 0; i < n; i++) {
         vector<Mat> levelsVector(levels);
+        #pragma omp parallel for shared(levelsVector)
         for (int level = 0; level < levels; level++) {
             Mat temp_filtframe(input[0][level].rows, input[0][level].cols, CV_64FC3);
-            pos_temp = 0;
-            //#pragma omp parallel for reduction(+:pos_temp)
+            #pragma omp parallel for
             for (int x = 0; x < input[0][level].rows; x++) {
-                //#pragma omp parallel for
+                #pragma omp parallel for shared(tmp, temp_filtframe)
                 for (int y = 0; y < input[0][level].cols; y++) {
+                    int pos_temp = 3 * (y + x * input[0][level].cols);
+                    
                     Vec3d pix_colors;
                     pix_colors[0] = tmp.at<Vec2d>(pos_temp, i)[0];
                     pix_colors[1] = tmp.at<Vec2d>(pos_temp + 1, i)[0];
                     pix_colors[2] = tmp.at<Vec2d>(pos_temp + 2, i)[0];
                     temp_filtframe.at<Vec3d>(x, y) = pix_colors;
-                    pos_temp += 3;
                 }
             }
             levelsVector[level] = temp_filtframe.clone();
