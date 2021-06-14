@@ -392,8 +392,22 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
     int lambda_c, double fl, double fh, int samplingRate, int chromAttenuation) {
 
     double itime, spatial_time, temporal_time, etime;
+
+    string name;
+    string delimiter = "/";
+
+    size_t last = 0; size_t next = 0;
+    while ((next = inFile.find(delimiter, last)) != string::npos) {
+        last = next + 1;
+    }
+
+    name = inFile.substr(last);
+    name = name.substr(0, name.find("."));
+    cout << name << endl;
+    cout << outDir << endl;
+
     // Creates the result video name
-    string outName = "guitar-ideal-from-" + to_string(fl) + "-to-" +
+    string outName = outDir + name + "-ideal-from-" + to_string(fl) + "-to-" +
         to_string(fh) + "-alpha-" + to_string(alpha) + "-lambda_c-" + to_string(lambda_c) +
         "-chromAtn-" + to_string(chromAttenuation) + ".avi";
 
@@ -430,6 +444,8 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
 
     vector<vector<Mat>> filteredStack = ideal_bandpassing_lpyr(pyr_stack, 3, fl, fh, samplingRate);
 
+    Scalar colorAmp(alpha, alpha * chromAttenuation, alpha * chromAttenuation);
+
     /*
     cout << filteredStack[0][0].at<Vec3d>(0, 0) << endl;
     cout << filteredStack[0][0].at<Vec3d>(0, 1) << endl;
@@ -438,24 +454,21 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
     cout << filteredStack[1][0].at<Vec3d>(0, 1) << endl;
     */
 
+
     // Amplify color channels in NTSC
-    #pragma omp parallel for collapse(4)
+    double ntsc_start = omp_get_wtime();
+
+    #pragma omp parallel for shared(filteredStack, colorAmp)
     for (int frame = 0; frame < filteredStack.size(); frame++) {
+        #pragma omp parallel for shared(filteredStack, colorAmp)
         for (int levelFrame = 0; levelFrame < filteredStack[frame].size(); levelFrame++) {
-            for (int x = 0; x < filteredStack[frame][levelFrame].rows; x++) {
-                for (int y = 0; y < filteredStack[frame][levelFrame].cols; y++) {
-                    Vec3d this_pixel = filteredStack[frame][levelFrame].at<Vec3d>(x, y);
-                    this_pixel[0] = this_pixel[0] * alpha;
-                    this_pixel[1] = this_pixel[1] * alpha * chromAttenuation;
-                    this_pixel[2] = this_pixel[2] * alpha * chromAttenuation;
-                    filteredStack[frame][levelFrame].at<Vec3d>(x, y) = this_pixel;
-                }
-            }
+            multiply(filteredStack[frame][levelFrame], colorAmp, filteredStack[frame][levelFrame]);
         }
     }
 
     temporal_time = omp_get_wtime();
 
+    std::cout << "NTSC: " << temporal_time - ntsc_start<< endl;
     std::cout << "Temporal filtering: " << temporal_time - spatial_time << endl;
 
     // Render on the input video to make the output video

@@ -12,7 +12,7 @@ using namespace std;
 
 int main() {
     string dataDir = "./vid";
-    string resultsDir = "./Results";
+    string resultsDir = "./Results/";
 
     if (utils::fs::createDirectory(resultsDir) != 0)
     {
