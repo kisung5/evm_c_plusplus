@@ -245,10 +245,10 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
 
     butter_coeff(1, 1, samplingRate * 2, fl);
     Vec2d low_a(pp[0], pp[1]);
-    Vec2d high_a(aa[0], aa[1]);
+    Vec2d low_b(aa[0], aa[1]);
 
     butter_coeff(1, 1, samplingRate * 2, fh);
-    Vec2d low_b(pp[0], pp[1]);
+    Vec2d high_a(pp[0], pp[1]);
     Vec2d high_b(aa[0], aa[1]);
 
     // Testing coefficientes
@@ -320,9 +320,14 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
     // Compute the Laplace pyramid
     vector<Mat> pyr = buildLpyr4(ntscframe1, max_ht);
 
-    cout << pyr.size() << endl;
+    //for (int i_test = 0; i_test < 10; i_test++) {
+    //    cout << pyr[0].at<Vec3d>(i_test, 0) << endl;
+    //}
+
+    cout << "Levels of LPYR: " << pyr.size() << endl;
 
     // Testing every level of the pyramid
+    cout << "Pind: " << endl;
     for (int i = 0; i < pyr.size(); i++) {
         cout << pyr[i].rows << " " << pyr[i].cols << " " << pyr[i].channels() << endl;
     }
@@ -331,7 +336,6 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
     vector<Mat> lowpass2 = pyr;
     vector<Mat> pyr_prev = pyr;
 
-    Mat output = rgbframe1;
     videoOut.write(frame1);
 
     int nLevels = (int)pyr.size();
@@ -339,18 +343,30 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
 
     for (int i = startIndex + 1; i < endIndex; i++) {
 
-        Mat frame, rgbframe, ntscframe, out_frame;
+        // Index print
+        cout << i << endl;
+
+        Mat frame, normalizedframe, rgbframe, out_frame, output;
         vector<Mat> filtered;
         // Capture frame-by-frame
         video >> frame;
 
+        //imshow("Original", frame);
+        //waitKey(0);
+
         // Color conversion GBR 2 NTSC
         cvtColor(frame, rgbframe, COLOR_BGR2RGB);
-        rgbframe = im2double(rgbframe);
-        ntscframe = rgb2ntsc(rgbframe);
+        normalizedframe = im2double(rgbframe);
+        frame = rgb2ntsc(normalizedframe);
 
         // Compute the Laplace pyramid
-        pyr = buildLpyr4(ntscframe, max_ht); // Has information in the upper levels
+        pyr = buildLpyr4(frame, max_ht); // Has information in the upper levels
+
+        //for (int i_test = 0; i_test < 10; i_test++) {
+        //    cout << pyr[0].at<Vec3d>(i_test, 0) << endl;
+        //}
+
+        cout << "lpyr data type: " << pyr[0].type() << endl;
 
         //for (int l_test = nLevels-1; l_test < nLevels; l_test++) {
         //    for (int i_test = 0; i_test < pyr[l_test].rows; i_test++) {
@@ -375,28 +391,55 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
             Mat lp1_h, pyr_h, pre_h, lp1_s, lp1_r;
             Mat lp2_l, pyr_l, pre_l, lp2_s, lp2_r;
 
-            lowpass1[l].convertTo(lp1_h, CV_64FC3, -high_b[1]);
-            pyr[l].convertTo(pyr_h, CV_64FC3, high_a[0]);
-            pyr_prev[l].convertTo(pre_h, CV_64FC3, high_a[1]);
-            lp1_s = lp1_h + pyr_h + pre_h;
-            lp1_s.convertTo(lp1_r, CV_64FC3, 1 / high_b[0]);
+            lp1_h = -high_b[1] * lowpass1[l].clone();
+
+            //cout << -high_b[1] << " * " << lowpass1[l].at<Vec3d>(0, 0) 
+            //    << " = " << lp1_h.at<Vec3d>(0, 0) << endl;
+
+            pyr_h = high_a[0] * pyr[l].clone();
+            pre_h = high_a[1] * pyr_prev[l].clone();
+            lp1_s = lp1_h.clone() + pyr_h.clone() + pre_h.clone();
+
+            //cout << lp1_h.at<Vec3d>(0, 0) << " + " << pyr_h.at<Vec3d>(0, 0) << " + " << pre_h.at<Vec3d>(0, 0)
+            //    << " = " << lp1_s.at<Vec3d>(0, 0) << endl;
+
+            lp1_r = lp1_s.clone() / high_b[0];
+
+            //cout << lp1_s.at<Vec3d>(0, 0) << " / " << high_b[0]
+            //    << " = " << lp1_r.at<Vec3d>(0, 0) << endl;
+
             lowpass1[l] = lp1_r.clone();
 
-            lowpass2[l].convertTo(lp2_l, CV_64FC3, -low_b[1]);
-            pyr[l].convertTo(pyr_l, CV_64FC3, low_a[0]);
-            pyr_prev[l].convertTo(pre_l, CV_64FC3, low_a[1]);
-            lp2_s = lp2_l + pyr_l + pre_l;
-            lp2_s.convertTo(lp2_r, CV_64FC3, 1 / low_b[0]);
+            lp2_l = -low_b[1] * lowpass2[l].clone();
+            pyr_l = low_a[0] * pyr[l].clone();
+            pre_l = low_a[1] * pyr_prev[l].clone();
+            lp2_s = lp2_l.clone() + pyr_l.clone() + pre_l.clone();
+            lp2_r = lp1_s.clone() / low_b[0];
             lowpass2[l] = lp2_r.clone();
 
-            //lowpass1[l] = (lowpass1[l] * -high_b[1] + pyr[l] * high_a[0] + pyr_prev[l] * high_a[1]) /
+            //lowpass1[l] = (lowpass1[l].clone() * -high_b[1] + (pyr[l].clone() * high_a[0]) + (pyr_prev[l].clone() * high_a[1])) /
             //    high_b[0];
-            //lowpass2[l] = (lowpass2[l] * -low_b[1] + pyr[l] * low_a[0] + pyr_prev[l] * low_a[1]) /
+            //lowpass2[l] = ((lowpass2[l].clone() * -low_b[1]) + (pyr[l].clone() * low_a[0]) + (pyr_prev[l].clone() * low_a[1])) /
             //    low_b[0];
 
-            Mat temp_result = lowpass1[l] - lowpass2[l];
+            
+
+            Mat temp_result = lowpass1[l].clone() - lowpass2[l].clone();
             filtered.push_back(temp_result.clone());
         }
+
+        //for (int i_test = 0; i_test < 10; i_test++) {
+        //    cout << "PyrPrev: " << pyr_prev[0].at<Vec3d>(i_test, 0) << endl;
+        //}
+        //for (int i_test = 0; i_test < 10; i_test++) {
+        //    cout << "Lowpass1: " << lowpass1[0].at<Vec3d>(i_test, 0) << endl;
+        //}
+        //for (int i_test = 0; i_test < 10; i_test++) {
+        //    cout << "Lowpass2: " << lowpass2[0].at<Vec3d>(i_test, 0) << endl;
+        //}
+        //for (int i_test = 0; i_test < 10; i_test++) {
+        //    cout << "Filtered: " << i_test << " " << filtered[0].at<Vec3d>(i_test, 0) << endl;
+        //}
 
         //for (int l_test = nLevels-1; l_test < nLevels; l_test++) {
         //    for (int i_test = 0; i_test < lowpass1[l_test].rows; i_test++) {
@@ -456,51 +499,58 @@ int amplify_spatial_lpyr_temporal_butter(string inFile, string outDir, double al
             currAlpha = currAlpha * exaggeration_factor;
 
             //cout << currAlpha << endl;
+            Mat mat_result;
 
             if (l == nLevels - 1 || l == 0) { // ignore the highest and lowest frecuency band
                 Size mat_sz(filtered[l].cols, filtered[l].rows);
-                Mat mat_zeros = Mat::zeros(mat_sz, CV_64FC3);
-                filtered[l] = mat_zeros;
+                mat_result = Mat::zeros(mat_sz, CV_64FC3);
             }
             else if (currAlpha > alpha) { // representative lambda exceeds lambda_c
-                filtered[l].convertTo(filtered[l], CV_64FC3, alpha);
-                //filtered[l] = filtered[l] * alpha;
+                //filtered[l].convertTo(filtered[l], CV_64FC3, alpha);
+                mat_result = alpha * filtered[l].clone();
             }
             else {
-                filtered[l].convertTo(filtered[l], CV_64FC3, currAlpha);
-                //filtered[l] = filtered[l] * currAlpha;
+                //filtered[l].convertTo(filtered[l], CV_64FC3, currAlpha);
+                mat_result = currAlpha * filtered[l].clone();
             }
+            filtered[l] = mat_result.clone();
 
             lambda = lambda / 2.0f;
         }
 
+        //for (int i_test = 0; i_test < 10; i_test++) {
+        //    cout << "Filtered1: " << filtered[0].at<Vec3d>(i_test, 0) << endl;
+        //}
+
         // Render on the input video
         
-        output = reconLpyr(filtered).clone();
+        output = reconLpyr(filtered);
+
+        for (int i_test = 0; i_test < 10; i_test++) {
+            cout << "OUTPUT: " << output.at<Vec3d>(i_test, 0) << endl;
+        }
 
         multiply(output, color_amp, output);
 
-        //for (int i_test = 0; i_test < 10; i_test++) {
-        //    cout << output.at<Vec3d>(i_test, 0) << endl;
-        //}
-
-        output = ntscframe + output;
+        output = frame.clone() + output.clone();
 
         //cout << output.rows << " " << output.cols << " " << output.channels() << endl;
 
         rgbframe = ntsc2rgb(output);
 
-        threshold(rgbframe, out_frame, 0.0f, 0.0f, THRESH_TOZERO);
-        threshold(out_frame, frame, 1.0f, 1.0f, THRESH_TRUNC);
+        threshold(rgbframe, rgbframe, 0.0f, 0.0f, THRESH_TOZERO);
+        threshold(rgbframe, rgbframe, 1.0f, 1.0f, THRESH_TRUNC);
 
-        rgbframe = im2uint8(frame);
+        frame = im2uint8(rgbframe);
 
-        cvtColor(rgbframe, out_frame, COLOR_RGB2BGR);
+        cvtColor(frame, frame, COLOR_RGB2BGR);
 
-        videoOut.write(out_frame);
+        //imshow("Image output", out_frame);
+        //waitKey(0);
 
-        cout << i << endl;
-        break;
+        videoOut.write(frame);
+
+        //break;
     }
 
     // When everything done, release the video capture and write object
@@ -982,11 +1032,11 @@ vector<vector<Mat>> build_Lpyr_stack(string vidFile, int startIndex, int endInde
 Mat reconLpyr(vector<Mat> lpyr) {
     int levels = (int)lpyr.size();
 
-    Size res_sz(lpyr[levels-1].cols, lpyr[levels-1].rows);
+    int this_level = levels - 1;
     //Size res_sz(lpyr[0].cols, lpyr[0].rows);
-    Mat res = Mat::zeros(res_sz, CV_64FC3);
+    //Mat res = Mat::zeros(res_sz, CV_64FC3);
     //Mat res = lpyr[1];
-    res = lpyr[levels - 1] + res;
+    Mat res = lpyr[this_level].clone();
 
     //Mat nres, sum;
     //pyrUp(res, nres, res_sz, BORDER_REFLECT101);
@@ -994,11 +1044,10 @@ Mat reconLpyr(vector<Mat> lpyr) {
 
 
     for (int l = levels - 2; l >= 0; l--) {
-        Mat nres;
-        Size res_sz1 = Size(lpyr[l].cols, lpyr[l].rows);
-        pyrUp(res, nres, res_sz1, BORDER_REFLECT101);
+        Size res_sz = Size(lpyr[l].cols, lpyr[l].rows);
+        pyrUp(res, res, res_sz, BORDER_REFLECT101);
 
-        res = nres + lpyr[l];
+        res += lpyr[l].clone();
     }
 
     return res;
