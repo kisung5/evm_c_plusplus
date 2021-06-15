@@ -33,6 +33,8 @@ Mat buildLpyr3(Mat image, int levels);
 
 vector<Mat> buildLpyr4(Mat image, int levels);
 
+vector<Mat> buildLpyrfromGauss(Mat image, int levels);
+
 Mat upConv(Mat image, Mat filter, int widthStep, int heightStep);
 
 Mat corrDn(Mat image, Mat filter, int heightStep, int widthStep);
