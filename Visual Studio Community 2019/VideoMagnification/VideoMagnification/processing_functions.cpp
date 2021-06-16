@@ -451,8 +451,8 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, double alp
 
     name = inFile.substr(last);
     name = name.substr(0, name.find("."));
-    cout << name << endl;
-    cout << outDir << endl;
+    std::cout << name << std::endl;
+    std::cout << outDir << std::endl;
 
     // Creates the result video name
     string outName = outDir + name + "-ideal-from-" + to_string(fl) + "-to-" +
@@ -589,7 +589,7 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, double alp
     video.release();
     videoOut.release();
 
-    cout << "Finished" << endl;
+    std::cout << "Finished" << std::endl;
 
     // Closes all the frames
     cv::destroyAllWindows();
@@ -619,8 +619,8 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha
 
     setBreakOnError(true);
 
-    cout << "Name: " << name << endl;
-    cout << "Output: " << outName << endl;
+    std::cout << "Name: " << name << std::endl;
+    std::cout << "Output: " << outName << std::endl;
 
     // Create a VideoCapture object and open the input file
     // If the input is the web camera, pass 0 instead of the video file name
@@ -665,7 +665,6 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha
     rgbframe = im2double(rgbframe);
     ntscframe = rgb2ntsc(rgbframe);
 
-    
     pyr = buildLpyrFromGauss(ntscframe, max_ht);
     lowpass1 = pyr;
     lowpass2 = pyr;
@@ -696,18 +695,66 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha
         // Compute the laplacian pyramid
         pyr = buildLpyrFromGauss(ntscframe, max_ht);
 
+        double coefficient1 = (1 - r1);
+        double coefficient2 = (1 - r2);
+        int pixelIterator = 0;
+
         for (int level = 0; level < nLevels; level++) {
-            lowpass1[level] = (1 - r1) * lowpass1[level].clone() + r1 * pyr[level].clone();
-            lowpass2[level] = (1 - r2) * lowpass2[level].clone() + r2 * pyr[level].clone();
-            filtered[level] = lowpass1[level].clone() - lowpass2[level].clone();
+            lowpass1[level] = coefficient1 * lowpass1[level].clone() + r1 * pyr[level].clone();
+            lowpass2[level] = coefficient2 * lowpass2[level].clone() + r2 * pyr[level].clone();
+            filtered[level] = lowpass1[level] - lowpass2[level];
+            
+            /*
+            std::cout << "Level: " << level << std::endl;
+            for (int row = 0; row < filtered[level].rows; row++) {
+                for (int col = 0; col < filtered[level].cols; col++) {
+                    if (pixelIterator == 0)
+                    {
+                        std::cout << "Level " << level << " | frame = " << i + 1 << " | pixel = "  << pixelIterator + 1 << std::endl;
+                        std::cout << "============ frame(1,1) ============" << std::endl;
+                        std::cout << ntscframe.at<Vec3d>(0, 0) << std::endl;
+                        std::cout << "============ lpyr(2) ============" << std::endl;
+                        std::cout << pyr[0].at<Vec3d>(0, 0) << std::endl;
+                        std::cout << "============ lowpass1[level].clone() ============" << std::endl;
+                        std::cout << lowpass1[level].clone().at<Vec3d>(0,0) << std::endl;
+                        std::cout << "============ lowpass2[level].clone() ============" << std::endl;
+                        std::cout << lowpass2[level].clone() << std::endl;
+                        std::cout << "============ pyr[level].clone() ============" << std::endl;
+                        std::cout << pyr[level].clone() << std::endl;
+                        std::cout << "============ coefficient1 * lowpass1[level].clone() ============" << std::endl;
+                        std::cout << coefficient1 * lowpass1[level].clone() << std::endl;
+                        std::cout << "============ coefficient2 * lowpass2[level].clone() ============" << std::endl;
+                        std::cout << coefficient2 * lowpass2[level].clone() << std::endl;
+                        std::cout << "============ r1 * pyr[level].clone() ============" << std::endl;
+                        std::cout << r1 * pyr[level].clone() << std::endl;
+                        std::cout << "============ r2 * pyr[level].clone() ============" << std::endl;
+                        std::cout << r2 * pyr[level].clone() << std::endl;
+                        std::cout << "============ coefficient1 * lowpass1[level].clone() + r1 * pyr[level].clone() ============" << std::endl;
+                        std::cout << coefficient1 * lowpass1[level].clone() + r1 * pyr[level].clone() << std::endl;
+                        std::cout << "============ coefficient2 * lowpass2[level].clone() + r2 * pyr[level].clone() ============" << std::endl;
+                        std::cout << coefficient2 * lowpass2[level].clone() + r2 * pyr[level].clone() << std::endl;
+                        std::cout << "============ coefficient2 * lowpass2[level].clone() + r2 * pyr[level].clone() ============" << std::endl;
+                        std::cout << lowpass2[level] << std::endl;
+                        std::cout << "============ lowpass1[level] - lowpass2[level] ============" << std::endl;
+                        std::cout << lowpass1[level] - lowpass2[level] << std::endl;
+                        std::cout << "============ Result ============" << std::endl;
+                        std::cout << filtered[level].at<Vec3d>(Point(col, row)) << std::endl;
+                        std::cout << "============ End ============" << std::endl;
+                    }
+                        
+                        //std::cout << iterator + 1 << " -> " << filtered[level].at<Vec3d>(Point(col, row)) << std::endl;
+                    pixelIterator++;
+                }
+            }
+            */
+            
         }
-
-
+        
         for (int l = nLevels - 1; l >= 0; l--) {
             // go one level down on pyramid each stage
 
            // Compute modified alpha for this level
-            double currAlpha = (double) (lambda / delta) / 8 - 1;
+            double currAlpha = lambda / delta / 8.0 - 1.0;
             currAlpha = currAlpha * exaggeration_factor;
 
             //cout << currAlpha << endl;
@@ -733,7 +780,7 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha
         output = reconLpyr(filtered);
 
         multiply(output, color_amp, output);
-        add(frame, output, output, noArray(), DataType<double>::type);
+        add(ntscframe, output, output, noArray(), DataType<double>::type);
 
         rgbframe = ntsc2rgb(output);
 
@@ -753,10 +800,10 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha
     video.release();
     videoOut.release();
 
-    cout << "Finished" << endl;
+    std::cout << "Finished" << endl;
 
     // Closes all the frames
-    destroyAllWindows();
+    cv::destroyAllWindows();
 
     return 0;
 }
