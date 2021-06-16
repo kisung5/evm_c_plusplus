@@ -6,11 +6,11 @@
 using namespace std;
 using namespace cv;
 
-int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
-    int lambda_c, double fl, double fh, int samplingRate, int chromAttenuation);
+int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, double alpha,
+    double lambda_c, double fl, double fh, double samplingRate, double chromAttenuation);
 
-int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, int alpha,
-    int lambda_c, double r1, double r2, int chromAttenuation);
+int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha,
+    double lambda_c, double r1, double r2, double chromAttenuation);
 
 int maxPyrHt(int frameWidth, int frameHeight, int filterSizeX, int filterSizeY);
 

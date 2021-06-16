@@ -286,7 +286,7 @@ Mat reconLpyr(vector<Mat> lpyr) {
     return res;
 }
 
-vector<vector<Mat>> ideal_bandpassing_lpyr(vector<vector<Mat>>& input, int dim, double wl, double wh, int samplingRate) {
+vector<vector<Mat>> ideal_bandpassing_lpyr(vector<vector<Mat>>& input, int dim, double wl, double wh, double samplingRate) {
     /*
     Comprobation of the dimention
     It is so 'dim' doesn't excede the actual dimension of the input
@@ -436,8 +436,8 @@ vector<vector<Mat>> ideal_bandpassing_lpyr(vector<vector<Mat>>& input, int dim, 
     return filtered;
 }
 
-int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
-    int lambda_c, double fl, double fh, int samplingRate, int chromAttenuation) {
+int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, double alpha,
+    double lambda_c, double fl, double fh, double samplingRate, double chromAttenuation) {
 
     double itime, spatial_time, temporal_time, etime;
 
@@ -598,8 +598,8 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
 }
 
 
-int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, int alpha,
-    int lambda_c, double r1, double r2, int chromAttenuation) {
+int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha,
+    double lambda_c, double r1, double r2, double chromAttenuation) {
 
     string name;
     string delimiter = "/";
@@ -670,7 +670,6 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, int alpha,
     lowpass1 = pyr;
     lowpass2 = pyr;
 
-    // Sum of total pixels to be processed
     int nLevels = (int)pyr.size();
 
     // Scalar vector for color attenuation in YIQ (NTSC) color space
@@ -681,7 +680,6 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, int alpha,
     int exaggeration_factor = 2;
     double lambda = (double) sqrt(vidHeight * vidHeight + vidWidth * vidWidth) / 3;
 
-    double start, end;
     for (int i = startIndex; i < endIndex; i++) {
         // Capture frame-by-frame
         video >> frame;
@@ -698,10 +696,10 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, int alpha,
         // Compute the laplacian pyramid
         pyr = buildLpyrFromGauss(ntscframe, max_ht);
 
-        for (int level = 0; level < nLevels - 1; level++) {
-            lowpass1[level] = (1 - r1) * lowpass1[level] + r1 * pyr[level];
-            lowpass2[level] = (1 - r2) * lowpass2[level] + r2 * pyr[level];
-            filtered[level] = lowpass1[level] - lowpass2[level];
+        for (int level = 0; level < nLevels; level++) {
+            lowpass1[level] = (1 - r1) * lowpass1[level].clone() + r1 * pyr[level].clone();
+            lowpass2[level] = (1 - r2) * lowpass2[level].clone() + r2 * pyr[level].clone();
+            filtered[level] = lowpass1[level].clone() - lowpass2[level].clone();
         }
 
 
@@ -730,13 +728,12 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, int alpha,
             lambda = lambda / 2.0f;
         }
 
-        // Render on the input video
 
+        // Render on the input video
         output = reconLpyr(filtered);
 
         multiply(output, color_amp, output);
-
-        output = frame.clone() + output.clone();
+        add(frame, output, output, noArray(), DataType<double>::type);
 
         rgbframe = ntsc2rgb(output);
 
