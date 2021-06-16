@@ -35,6 +35,7 @@
 
 constexpr auto MAX_FILTER_SIZE = 5;
 constexpr auto PYR_BORDER_TYPE = 2;
+constexpr auto BAR_WIDTH = 70;
 
 using namespace cv;
 using namespace std;
@@ -396,8 +397,15 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, double alp
         Size(vidWidth, vidHeight));
 
     int k = 0;
-    for (int i = startIndex; i < endIndex; i++) {
 
+    float progress = 0;
+    for (int i = 0; i < BAR_WIDTH; ++i) {
+        std::cout << "=";
+    }
+    std::cout << std::endl;
+    std::cout << "Processing " << inFile << "." << endl;
+
+    for (int i = startIndex; i < endIndex; i++) {
         Mat frame, rgbframe, ntscframe, filt_ind, filtered, out_frame;
         // Capture frame-by-frame
         video >> frame;
@@ -450,10 +458,12 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, double alp
     video.release();
     videoOut.release();
 
-    std::cout << "=====================================================================" << std::endl;
-    std::cout << outName << " finished. Elapsed time: " << etime - itime << " secs." << std::endl;
-    std::cout << "=====================================================================" << std::endl;
-
+    std::cout << std::endl;
+    std::cout << "Finished. Elapsed time: " << etime - itime << " secs." << std::endl;
+    for (int i = 0; i < BAR_WIDTH; ++i) {
+        std::cout << "=";
+    }
+    std::cout << std::endl;
 
     // Closes all the frames
     cv::destroyAllWindows();
@@ -518,6 +528,13 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha
     vector<Mat> lowpass1, lowpass2, pyr_prev;
     vector<Mat> pyr(max_ht), filtered(max_ht);
 
+    float progress = 0;
+    for (int i = 0; i < BAR_WIDTH; ++i) {
+        std::cout << "=";
+    }
+    std::cout << std::endl;
+    std::cout << "Processing " << inFile << "." << endl;
+
     // First frame
     video >> frame;
 
@@ -545,6 +562,18 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha
     double lambda = (double) sqrt(vidHeight * vidHeight + vidWidth * vidWidth) / 3;
 
     for (int i = startIndex; i < endIndex; i++) {
+        progress = (float) i / endIndex;
+
+        std::cout << "[";
+        int pos = BAR_WIDTH * progress;
+        for (int i = 0; i < BAR_WIDTH; ++i) {
+            if (i < pos) std::cout << "=";
+            else if (i == pos) std::cout << ">";
+            else std::cout << " ";
+        }
+        std::cout << "] " << int(progress * 100.0) << " %\r";
+        std::cout.flush();
+
         // Capture frame-by-frame
         video >> frame;
 
@@ -564,6 +593,7 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha
         double coefficient2 = (1 - r2);
         int pixelIterator = 0;
 
+        #pragma omp parallel for shared(lowpass1, lowpass2, pyr, filtered)
         for (int level = 0; level < nLevels; level++) {
             lowpass1[level] = coefficient1 * lowpass1[level].clone() + r1 * pyr[level].clone();
             lowpass2[level] = coefficient2 * lowpass2[level].clone() + r2 * pyr[level].clone();
@@ -571,6 +601,7 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha
         }
 
         // Go one level down on pyramid each stage
+        #pragma omp parallel for shared(filtered, lambda)
         for (int l = nLevels - 1; l >= 0; l--) {
            // Compute modified alpha for this level
             double currAlpha = lambda / delta / 8.0 - 1.0;
@@ -614,6 +645,8 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha
         videoOut.write(frame);
 
     }
+
+    
    
     etime = omp_get_wtime();
 
@@ -621,10 +654,12 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha
     video.release();
     videoOut.release();
 
-    std::cout << "=====================================================================" << std::endl;
-    std::cout << outName << " finished. Elapsed time: " << etime - itime << " secs." << std::endl;
-    std::cout << "=====================================================================" << std::endl;
-
+    std::cout << std::endl;
+    std::cout << "Finished. Elapsed time: " << etime - itime << " secs." << std::endl;
+    for (int i = 0; i < BAR_WIDTH; ++i) {
+        std::cout << "=";
+    }
+    std::cout << std::endl;
 
     // Closes all the frames
     cv::destroyAllWindows();
