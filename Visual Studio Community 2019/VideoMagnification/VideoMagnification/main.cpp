@@ -11,10 +11,11 @@ using namespace cv;
 using namespace std;
 
 int main() {
-    string dataDir = "./vid";
-    string resultsDir = "./Results/";
+    string input1 = "./vid/guitar.mp4";
+    string input2 = "./vid/baby.mp4";
+    string output = "./Results/";
 
-    if (utils::fs::createDirectory(resultsDir) != 0)
+    if (utils::fs::createDirectory(output) != 0)
     {
         cout << "Not able to create the directory" << endl;
     }
@@ -22,10 +23,13 @@ int main() {
     //Mat input(10, 10, CV_8U);
 
 
-    int status1 = amplify_spatial_lpyr_temporal_ideal(dataDir + "/guitar.mp4", resultsDir,
-        100, 10, 100, 120, 600, 0);
+    //int status1 = amplify_spatial_lpyr_temporal_ideal(input1, output,
+        //100, 10, 100, 120, 600, 0);
 
-    if (status1 == -1) {
+    int status2 = amplify_spatial_lpyr_temporal_iir(input2, output,
+        10, 16, 0.4, 0.05, 0.1);
+
+    if (status2 == -1) {
         return -1;
     }
 

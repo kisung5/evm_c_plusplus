@@ -9,7 +9,12 @@ using namespace cv;
 int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
     int lambda_c, double fl, double fh, int samplingRate, int chromAttenuation);
 
+int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, int alpha,
+    int lambda_c, double r1, double r2, int chromAttenuation);
+
 int maxPyrHt(int frameWidth, int frameHeight, int filterSizeX, int filterSizeY);
+
+Mat reconLpyr(vector<Mat> lpyr);
 
 vector<Mat> buildLpyr(Mat image, int levels);
 
@@ -18,6 +23,8 @@ Mat buildLpyr2(Mat image, int levels);
 Mat buildLpyr3(Mat image, int levels);
 
 vector<Mat> buildLpyr4(Mat image, int levels);
+
+vector<Mat> buildLpyrFromGauss(Mat image, int levels);
 
 Mat upConv(Mat image, Mat filter, int widthStep, int heightStep);
 

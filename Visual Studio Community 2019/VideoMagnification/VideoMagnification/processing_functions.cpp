@@ -173,6 +173,25 @@ vector<Mat> buildLpyr4(Mat image, int levels) {
     return laplacianPyramid;
 }
 
+vector<Mat> buildLpyrFromGauss(Mat image, int levels) {
+    vector<Mat> gaussianPyramid;
+    vector<Mat> laplacianPyramid(levels);
+
+    buildPyramid(image, gaussianPyramid, levels, BORDER_REFLECT101);
+
+#pragma omp parallel for shared(gaussianPyramid, laplacianPyramid)
+    for (int l = 0; l < levels - 1; l++) {
+        Mat expandedPyramid;
+        //pyrDown(gaussianPyramid[l], gaussianPyramid[l + 1], Size((gaussianPyramid[l].cols + 1) / 2, (gaussianPyramid[l].rows + 1) / 2), BORDER_REFLECT101);
+        pyrUp(gaussianPyramid[l + 1], expandedPyramid, Size(gaussianPyramid[l].cols, gaussianPyramid[l].rows), BORDER_REFLECT101);
+        laplacianPyramid[l] = gaussianPyramid[l] - expandedPyramid;
+    }
+
+    laplacianPyramid[levels - 1] = gaussianPyramid[levels - 1];
+
+    return laplacianPyramid;
+}
+
 vector<vector<Mat>> build_Lpyr_stack(string vidFile, int startIndex, int endIndex) {
     // Read video
     // Create a VideoCapture object and open the input file
@@ -236,6 +255,35 @@ vector<vector<Mat>> build_Lpyr_stack(string vidFile, int startIndex, int endInde
     }
 
     return pyr_stack;
+}
+
+/**
+* res = reconLpyr(lpyr)
+*
+* Reconstruct image from Laplacian pyramid, as created by buildLpyr.
+*
+* lpyr is a vector of matrices containing the N pyramid subbands, ordered from fine
+* to coarse.
+*
+* --Update--
+* Code translated to C++
+* Author: Ki - Sung Lim
+* Date: June 2021
+*/
+Mat reconLpyr(vector<Mat> lpyr) {
+    int levels = (int)lpyr.size();
+
+    int this_level = levels - 1;
+    Mat res = lpyr[this_level].clone();
+
+    for (int l = levels - 2; l >= 0; l--) {
+        Size res_sz = Size(lpyr[l].cols, lpyr[l].rows);
+        pyrUp(res, res, res_sz, BORDER_REFLECT101);
+
+        res += lpyr[l].clone();
+    }
+
+    return res;
 }
 
 vector<vector<Mat>> ideal_bandpassing_lpyr(vector<vector<Mat>>& input, int dim, double wl, double wh, int samplingRate) {
@@ -545,6 +593,173 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, int alpha,
 
     // Closes all the frames
     cv::destroyAllWindows();
+
+    return 0;
+}
+
+
+int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, int alpha,
+    int lambda_c, double r1, double r2, int chromAttenuation) {
+
+    string name;
+    string delimiter = "/";
+
+    size_t last = 0; size_t next = 0;
+    while ((next = inFile.find(delimiter, last)) != string::npos) {
+        last = next + 1;
+    }
+
+    name = inFile.substr(last);
+    name = name.substr(0, name.find("."));
+
+    // Creates the result video name
+    string outName = outDir + name + "-iir-r1-" + to_string(r1) + "-r2-" +
+        to_string(r2) + "-alpha-" + to_string(alpha) + "-lambda_c-" + to_string(lambda_c) +
+        "-chromAtn-" + to_string(chromAttenuation) + ".avi";
+
+    setBreakOnError(true);
+
+    cout << "Name: " << name << endl;
+    cout << "Output: " << outName << endl;
+
+    // Create a VideoCapture object and open the input file
+    // If the input is the web camera, pass 0 instead of the video file name
+    //VideoCapture video(0);
+    VideoCapture video(inFile);
+
+    // Check if video opened successfully
+    if (!video.isOpened()) {
+        std::cout << "Error opening video stream or file" << endl;
+        return -1;
+    }
+
+    // Extract video info
+    int len = video.get(CAP_PROP_FRAME_COUNT);
+    int startIndex = 1;
+    int endIndex = len - 10;
+    int vidHeight = video.get(CAP_PROP_FRAME_HEIGHT);
+    int vidWidth = video.get(CAP_PROP_FRAME_WIDTH);
+    int fr = video.get(CAP_PROP_FPS);
+
+    // Define the codec and create VideoWriter object
+    VideoWriter videoOut(outName, VideoWriter::fourcc('M', 'J', 'P', 'G'), fr,
+        Size(vidWidth, vidHeight));
+
+    // Compute maximum pyramid height for every frame
+    int max_ht = 1 + maxPyrHt(vidWidth, vidHeight, MAX_FILTER_SIZE, MAX_FILTER_SIZE);
+
+    // Variables to be used
+    Mat frame, rgbframe, ntscframe, output;
+    vector<Mat> lowpass1, lowpass2, pyr_prev;
+    vector<Mat> pyr(max_ht), filtered(max_ht);
+
+    // First frame
+    video >> frame;
+
+    // If the frame is empty, throw an error
+    if (frame.empty())
+        return -1;
+
+    // Color conversion GBR 2 NTSC
+    cvtColor(frame, rgbframe, COLOR_BGR2RGB);
+    rgbframe = im2double(rgbframe);
+    ntscframe = rgb2ntsc(rgbframe);
+
+    
+    pyr = buildLpyrFromGauss(ntscframe, max_ht);
+    lowpass1 = pyr;
+    lowpass2 = pyr;
+
+    // Sum of total pixels to be processed
+    int nLevels = (int)pyr.size();
+
+    // Scalar vector for color attenuation in YIQ (NTSC) color space
+    Scalar color_amp(1.0f, chromAttenuation, chromAttenuation);
+
+    // Temporal filtering variables
+    double delta = (double) (lambda_c / 8) / (1 + alpha);
+    int exaggeration_factor = 2;
+    double lambda = (double) sqrt(vidHeight * vidHeight + vidWidth * vidWidth) / 3;
+
+    double start, end;
+    for (int i = startIndex; i < endIndex; i++) {
+        // Capture frame-by-frame
+        video >> frame;
+
+        // If the frame is empty, break immediately
+        if (frame.empty())
+            break;
+
+        // Color conversion GBR 2 NTSC
+        cvtColor(frame, rgbframe, COLOR_BGR2RGB);
+        rgbframe = im2double(rgbframe);
+        ntscframe = rgb2ntsc(rgbframe);
+
+        // Compute the laplacian pyramid
+        pyr = buildLpyrFromGauss(ntscframe, max_ht);
+
+        for (int level = 0; level < nLevels - 1; level++) {
+            lowpass1[level] = (1 - r1) * lowpass1[level] + r1 * pyr[level];
+            lowpass2[level] = (1 - r2) * lowpass2[level] + r2 * pyr[level];
+            filtered[level] = lowpass1[level] - lowpass2[level];
+        }
+
+
+        for (int l = nLevels - 1; l >= 0; l--) {
+            // go one level down on pyramid each stage
+
+           // Compute modified alpha for this level
+            double currAlpha = (double) (lambda / delta) / 8 - 1;
+            currAlpha = currAlpha * exaggeration_factor;
+
+            //cout << currAlpha << endl;
+            Mat mat_result;
+
+            if (l == max_ht - 1 || l == 0) { // ignore the highest and lowest frecuency band
+                Size mat_sz(filtered[l].cols, filtered[l].rows);
+                mat_result = Mat::zeros(mat_sz, CV_64FC3);
+            }
+            else if (currAlpha > alpha) { // representative lambda exceeds lambda_c
+                mat_result = alpha * filtered[l].clone();
+            }
+            else {
+                mat_result = currAlpha * filtered[l].clone();
+            }
+            filtered[l] = mat_result.clone();
+
+            lambda = lambda / 2.0f;
+        }
+
+        // Render on the input video
+
+        output = reconLpyr(filtered);
+
+        multiply(output, color_amp, output);
+
+        output = frame.clone() + output.clone();
+
+        rgbframe = ntsc2rgb(output);
+
+        threshold(rgbframe, rgbframe, 0.0f, 0.0f, THRESH_TOZERO);
+        threshold(rgbframe, rgbframe, 1.0f, 1.0f, THRESH_TRUNC);
+
+        frame = im2uint8(rgbframe);
+
+        cvtColor(frame, frame, COLOR_RGB2BGR);
+
+        //frame_stack[i] = frame.clone();
+        videoOut.write(frame);
+
+    }
+   
+    // When everything done, release the video capture and write object
+    video.release();
+    videoOut.release();
+
+    cout << "Finished" << endl;
+
+    // Closes all the frames
+    destroyAllWindows();
 
     return 0;
 }
