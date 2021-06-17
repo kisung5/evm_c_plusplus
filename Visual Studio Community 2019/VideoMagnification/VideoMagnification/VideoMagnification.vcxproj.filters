@@ -70,14 +70,14 @@
     </Media>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="processing_functions.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="ellf.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="im_conv.h">
-      <Filter>Header Files</Filter>
+      <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="ellf.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="processing_functions.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
