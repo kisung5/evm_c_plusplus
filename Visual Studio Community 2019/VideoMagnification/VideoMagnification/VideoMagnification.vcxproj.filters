@@ -18,18 +18,65 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="processing_functions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="im_conv.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cmplx.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="const.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ellf.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mtherr.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="processing_functions.h">
+    <Media Include="vid\baby.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\baby2.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\camera.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\face.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\face2.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\guitar.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\shadow.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\subway.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="vid\wrist.mp4">
+      <Filter>Resource Files</Filter>
+    </Media>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ellf.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="im_conv.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="processing_functions.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
