@@ -39,6 +39,7 @@ Mat reconLpyr(vector<Mat> pyr);
 /*
 Temporal filter functions
 */
+
 vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, int samplingRate);
 
 vector<vector<Mat>> ideal_bandpassing_lpyr(vector<vector<Mat>>& input, int dim, double wl, double wh, double samplingRate);
