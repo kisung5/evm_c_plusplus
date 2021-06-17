@@ -107,7 +107,7 @@
     <LibraryPath>D:\opencv\build\install\x64\vc16\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LinkIncremental>true</LinkIncremental>
+    <LinkIncremental>false</LinkIncremental>
     <IncludePath>D:\opencv\build\install\include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\opencv\build\install\x64\vc16\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
@@ -167,8 +167,8 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <OpenMPSupport>true</OpenMPSupport>
-      <LanguageStandard>stdcpp17</LanguageStandard>
-      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <LanguageStandard>Default</LanguageStandard>
+      <LanguageStandard_C>Default</LanguageStandard_C>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <Link>

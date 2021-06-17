@@ -31,6 +31,8 @@ double FILTER_DATA[] = { 0.088388347648318, 0.353553390593274, 0.530330085889911
 Mat FILTER(5, 1, CV_64FC1, FILTER_DATA);
 Mat T_FILTER(1, 5, CV_64FC1, FILTER_DATA);
 
+#pragma comment (lib, "opencv_world452.lib")
+#pragma comment (lib, "opencv_world452d.lib")
 
 /**
 * Spatial Filtering : Gaussian blurand down sample
