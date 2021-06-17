@@ -30,7 +30,7 @@ vector<Mat> build_GDown_stack(string vidFile, int startIndex, int endIndex, int 
 
 int maxPyrHt(int frameWidth, int frameHeight, int filterSizeX, int filterSizeY);
 
-vector<Mat> buildLpyrFromGauss(Mat image, int levels);
+vector<Mat> buildLpyrfromGauss(Mat image, int levels);
 
 vector<vector<Mat>> build_Lpyr_stack(string vidFile, int startIndex, int endIndex);
 
@@ -39,6 +39,7 @@ Mat reconLpyr(vector<Mat> pyr);
 /*
 Temporal filter functions
 */
+vector<Mat> ideal_bandpassing(vector<Mat> input, int dim, double wl, double wh, int samplingRate);
 
 vector<vector<Mat>> ideal_bandpassing_lpyr(vector<vector<Mat>>& input, int dim, double wl, double wh, double samplingRate);
 

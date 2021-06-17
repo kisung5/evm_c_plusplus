@@ -61,8 +61,6 @@ int main() {
     //amplify_spatial_lpyr_temporal_ideal(dataDir + "guitar.mp4", resultsDir,
     //    50, 10, 72.0f, 92.0f, 600, 0);
 
-    //amplify_spatial_lpyr_temporal_ideal(dataDir + "guitar.mp4", resultsDir,
-    //    100, 10, 100.0f, 120.0f, 600, 0);
   
     int status1 = amplify_spatial_lpyr_temporal_ideal(dataDir + "guitar.mp4", resultsDir,
         100, 10, 100.0f, 120.0f, 600, 0);

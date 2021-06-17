@@ -838,7 +838,7 @@ vector<vector<Mat>> build_Lpyr_stack(string vidFile, int startIndex, int endInde
         rgbframe = im2double(rgbframe);
         ntscframe = rgb2ntsc(rgbframe);
 
-        vector<Mat> pyr_output = buildLpyrFromGauss(ntscframe, max_ht);
+        vector<Mat> pyr_output = buildLpyrfromGauss(ntscframe, max_ht);
         pyr_stack[i] = pyr_output;
     }
 
@@ -1082,9 +1082,9 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, double alp
     Scalar colorAmp(alpha, alpha * chromAttenuation, alpha * chromAttenuation);
 
     // Amplify color channels in NTSC
-    #pragma omp parallel for shared(filteredStack, colorAmp)
+#pragma omp parallel for shared(filteredStack, colorAmp)
     for (int frame = 0; frame < filteredStack.size(); frame++) {
-        #pragma omp parallel for shared(filteredStack, colorAmp)
+#pragma omp parallel for shared(filteredStack, colorAmp)
         for (int levelFrame = 0; levelFrame < filteredStack[frame].size(); levelFrame++) {
             multiply(filteredStack[frame][levelFrame], colorAmp, filteredStack[frame][levelFrame]);
         }
@@ -1130,7 +1130,7 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, double alp
         frame = ntsc2rgb(filtered);
         //imshow("Frame", frame);
 
-        #pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(3)
         for (int x = 0; x < frame.rows; x++) {
             for (int y = 0; y < frame.cols; y++) {
                 Vec3d this_pixel = frame.at<Vec3d>(x, y);
@@ -1177,6 +1177,7 @@ int amplify_spatial_lpyr_temporal_ideal(string inFile, string outDir, double alp
     cv::destroyAllWindows();
 
     return 0;
+}
 
 
 int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha,
@@ -1254,7 +1255,7 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha
     rgbframe = im2double(rgbframe);
     ntscframe = rgb2ntsc(rgbframe);
 
-    pyr = buildLpyrFromGauss(ntscframe, max_ht);
+    pyr = buildLpyrfromGauss(ntscframe, max_ht);
     lowpass1 = pyr;
     lowpass2 = pyr;
 
@@ -1294,7 +1295,7 @@ int amplify_spatial_lpyr_temporal_iir(string inFile, string outDir, double alpha
         ntscframe = rgb2ntsc(rgbframe);
 
         // Compute the laplacian pyramid
-        pyr = buildLpyrFromGauss(ntscframe, max_ht);
+        pyr = buildLpyrfromGauss(ntscframe, max_ht);
 
         double coefficient1 = (1 - r1);
         double coefficient2 = (1 - r2);
