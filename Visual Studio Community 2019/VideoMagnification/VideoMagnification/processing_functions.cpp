@@ -103,7 +103,6 @@ vector<vector<Mat>> build_Lpyr_stack(string vidFile, int startIndex, int endInde
 
     double start, end;
     for (int i = startIndex; i < endIndex; i++) {
-        //start = omp_get_wtime();
         // Define variables
         Mat frame, rgbframe, ntscframe;
 
@@ -117,34 +116,9 @@ vector<vector<Mat>> build_Lpyr_stack(string vidFile, int startIndex, int endInde
         cvtColor(frame, rgbframe, COLOR_BGR2RGB);
         rgbframe = im2double(rgbframe);
         ntscframe = rgb2ntsc(rgbframe);
-        //start = omp_get_wtime();
+
         vector<Mat> pyr_output = buildLpyrFromGauss(ntscframe, max_ht);
-        //pyr_stack3[i] = buildLpyr3(ntscframe, max_ht);
-        //end = omp_get_wtime();
-        //cout << "Build Lpyr for frame " << i << ". Elapsed time = " << end - start << endl;
-        //cout << pyr_output[0].at<Vec3d>(0, 0) << endl;
-        //cout << pyr_output[0].at<Vec3d>(1, 0) << endl;
-        //cout << pyr_output[0].at<Vec3d>(69, 0) << endl;
-        //cout << pyr_output[0].at<Vec3d>(70, 0) << endl;
-        //cout << pyr_output[0].at<Vec3d>(71, 0) << endl;
-        //cout << pyr_output[0].at<Vec3d>(79, 0) << endl;
-        //cout << pyr_output[0].at<Vec3d>(80, 0) << endl;
-        //start = omp_get_wtime();
-        //Mat pyr_output2 = buildLpyr2(ntscframe, max_ht);
-        //end = omp_get_wtime();
-        //cout << "Build Lpyr2 for frame " << i << ". Elapsed time = " << end - start << endl;
-        // Testing the values in pyr_output2 
-        //cout << pyr_output2.at<Vec3d>(0, 0) << endl;
-        //cout << pyr_output2.at<Vec3d>(1, 0) << endl;
-        //cout << pyr_output2.at<Vec3d>(69, 0) << endl;
-        //cout << pyr_output2.at<Vec3d>(70, 0) << endl;
-        //cout << pyr_output2.at<Vec3d>(71, 0) << endl;
-        //cout << pyr_output2.at<Vec3d>(79, 0) << endl;
-        //cout << pyr_output2.at<Vec3d>(80, 0) << endl;
-        //cout << "" << endl;
         pyr_stack[i] = pyr_output;
-        //end = omp_get_wtime();
-        //cout << "Iteration " << i << " time = " << end - start << endl;
     }
 
     return pyr_stack;

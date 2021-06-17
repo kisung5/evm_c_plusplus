@@ -20,11 +20,11 @@ int main() {
         cout << "Not able to create the directory" << endl;
     }
 
+    int status1 = amplify_spatial_lpyr_temporal_ideal(input1, output,
+        100, 10, 100, 120, 600, 0);
+
     int status2 = amplify_spatial_lpyr_temporal_iir(input2, output,
         10, 16, 0.4, 0.05, 0.1);
-
-    int status1 = amplify_spatial_lpyr_temporal_ideal(input1, output,
-        100, 10, 100, 120, 600, 0);    
 
     int status = status1 + status2;
 
