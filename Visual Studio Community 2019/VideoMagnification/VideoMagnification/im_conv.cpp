@@ -24,7 +24,7 @@ Mat im2double(Mat A) {
 	// Get the data type of the input image
 	if (A.type() == CV_8UC3) {
 		A.convertTo(B, CV_64FC3, 1.0 / 255.0);  // Divide all values by the largest possible value in the datatype
-	}
+	} 
 
 	return B;
 }

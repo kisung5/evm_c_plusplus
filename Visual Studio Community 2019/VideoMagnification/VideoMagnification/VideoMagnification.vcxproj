@@ -19,11 +19,27 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="cmplx.c" />
+    <ClCompile Include="const.c" />
+    <ClCompile Include="ellf.c" />
     <ClCompile Include="im_conv.cpp" />
-    <ClCompile Include="processing_functions.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="mtherr.c" />
+    <ClCompile Include="processing_functions.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <Media Include="vid\baby.mp4" />
+    <Media Include="vid\baby2.mp4" />
+    <Media Include="vid\camera.mp4" />
+    <Media Include="vid\face.mp4" />
+    <Media Include="vid\face2.mp4" />
+    <Media Include="vid\guitar.mp4" />
+    <Media Include="vid\shadow.mp4" />
+    <Media Include="vid\subway.mp4" />
+    <Media Include="vid\wrist.mp4" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ellf.h" />
     <ClInclude Include="im_conv.h" />
     <ClInclude Include="processing_functions.h" />
   </ItemGroup>
@@ -87,13 +103,13 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\opencv\build\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\opencv\build\x64\vc15\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\opencv\build\install\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\opencv\build\install\x64\vc16\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\opencv\build\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\opencv\build\x64\vc15\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\opencv\build\install\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\opencv\build\install\x64\vc16\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -131,6 +147,11 @@
       <ConformanceMode>true</ConformanceMode>
       <OpenMPSupport>true</OpenMPSupport>
       <AdditionalOptions>-o2 %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <Optimization>Disabled</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -148,12 +169,16 @@
       <ConformanceMode>true</ConformanceMode>
       <OpenMPSupport>true</OpenMPSupport>
       <AdditionalOptions>-o2 %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard>Default</LanguageStandard>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
