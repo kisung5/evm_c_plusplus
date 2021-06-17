@@ -14,6 +14,9 @@
 #include "processing_functions.h"
 #include "im_conv.h"
 
+#pragma comment (lib, "opencv_world452.lib")
+#pragma comment (lib, "opencv_world452d.lib")
+
 /**
 * Spatial Filtering : Gaussian blurand down sample
 * Temporal Filtering : Ideal bandpass
