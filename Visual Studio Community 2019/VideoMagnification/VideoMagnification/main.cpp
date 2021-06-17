@@ -9,6 +9,7 @@ using namespace cv;
 
 int main() {
 
+
     string dataDir = "./vid/";
     string resultsDir = "./Results/";
 
@@ -62,6 +63,18 @@ int main() {
 
     //amplify_spatial_lpyr_temporal_ideal(dataDir + "guitar.mp4", resultsDir,
     //    100, 10, 100.0f, 120.0f, 600, 0);
+  
+    int status1 = amplify_spatial_lpyr_temporal_ideal(dataDir + "guitar.mp4", resultsDir,
+        100, 10, 100.0f, 120.0f, 600, 0);
 
+    int status2 = amplify_spatial_lpyr_temporal_iir(dataDir + "baby.mp4", resultsDir,
+        10, 16, 0.4f, 0.05f, 0.1f);
+  
+    int status = status1 + status2;
+    
+    if (status < 0) {
+        return -1;
+    }
+  
     return 0;
 }
