@@ -16,3 +16,8 @@ The use of algorithms like the [Eulerian Video Magnification (EVM)](http://peopl
 
 ### Memory use
 ![image](https://user-images.githubusercontent.com/31488944/142742335-443c3463-3a31-4705-8c62-45d62bdbd46f.png)
+
+## More
+- [Paper](https://drive.google.com/open?id=1KYjeBpGlytra5XYvsP52LJGyfW6m88bG&authuser=edmobepersonal%40gmail.com&usp=drive_fs) published in [URUCON 2021](http://urucon2021.org/accepted_papers.html)
+- [Sorftware Requirements Specification document (Spanish)](https://drive.google.com/file/d/1IlCPeKQuEBswGQdrJSZE0omLrGmlNw5r/view?usp=sharing)
+- [Software Design document (Spanish)](https://drive.google.com/file/d/1J5ISYAXXiNFusLBbf9aKeGKw0pK86sId/view?usp=sharing)
